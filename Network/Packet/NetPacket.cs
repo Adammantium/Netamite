@@ -171,6 +171,14 @@ namespace Netamite.Network.Packet {
             return (byte) PacketType.UNKNOWN;
         }
 
+        public bool IsReliable() {
+            Attribute attribute = GetType().GetCustomAttribute(typeof(PacketDefinition), true);
+            if(attribute != null) {
+                return ((PacketDefinition) attribute).reliable;
+            }
+            return true;
+        }
+
         public void Dispose() {
             
         }
