@@ -1,4 +1,5 @@
-﻿using Netamite.Network.Packet;
+﻿using Netamite.Logging;
+using Netamite.Network.Packet;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -63,7 +64,7 @@ namespace Netamite.Network.Socket {
             try {
                 onPacket.Invoke(packet);
             } catch(Exception e) {
-                //Log.Err(e); // TODO
+                Log.Err(e);
             }
             bytesReceived += packet.GetData().Length;
         }

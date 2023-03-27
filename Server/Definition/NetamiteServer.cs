@@ -1,4 +1,5 @@
 ﻿using Netamite.Network.Packet;
+using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Socket;
 using Netamite.Security;
 using Netamite.Server.Data;
@@ -11,9 +12,9 @@ using System.Runtime.InteropServices;
 namespace Netamite.Server.Definition {
     public class NetamiteServer {
 
-        public List<ClientInformation> _clients = new List<ClientInformation>();
+        public Dictionary<ulong, ClientInformation> _clients = new Dictionary<ulong, ClientInformation>();
         public ClientInformation[] Clients {
-            get { return _clients.ToArray(); }
+            get { return _clients.Values.ToArray(); }
         }
 
         private int _MaxClients = int.MaxValue;
@@ -48,6 +49,40 @@ namespace Netamite.Server.Definition {
 
         public NetamiteServer(int maxClients) : base() {
             this.MaxClients = maxClients;
+        }
+
+
+        internal string CheckEstablishConnection(EstablishConnectionPacket ecp) {
+            if(HasConnectToken) {
+                if(!_ConnectToken.Equals(ecp.password)) { // Passwords are hashed with SHA256
+                    return $"WRONG_PASSWORD";
+                }
+            }
+
+            if(_clients.Count >= MaxClients) {
+                return "SERVER_FULL";
+            }
+
+            return null;
+        }
+
+        internal static ulong currentId;
+        internal void ClientJoined(ClientInformation clientInformation) {
+            if(clientInformation.ClientId <= 0) {
+                clientInformation.ClientId = ++currentId;
+            }
+            clientInformation.ConnectionTimestamp = DateTime.Now;
+            _clients.Add(clientInformation.ClientId, clientInformation);
+
+            SendReliableTo(clientInformation, new WelcomePacket(clientInformation.ClientId));
+
+            OnConnect?.Invoke(clientInformation);
+        }
+
+        internal void ClientLeft(ClientInformation clientInformation) {
+            _clients.Remove(clientInformation.ClientId);
+
+            OnDisconnect?.Invoke(clientInformation);
         }
 
         /// <summary>

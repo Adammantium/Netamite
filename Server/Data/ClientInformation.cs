@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Network.Packet;
+using System;
 
 namespace Netamite.Server.Data {
     public class ClientInformation {
@@ -6,6 +7,9 @@ namespace Netamite.Server.Data {
         public ulong    ClientId;
         public string   ClientName;
         public DateTime ConnectionTimestamp;
+
+        public Action<NetPacket> sendReliablePacket;
+        public Action<NetPacket> sendUnreliablePacket;
 
     }
 }

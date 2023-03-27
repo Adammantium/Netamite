@@ -19,11 +19,6 @@ namespace Netamite.Network.Packet {
             }
 
             Type[] typelist = Assembly.GetAssembly(typeof(NetPacket)).GetTypes()
-                    .Where(t => string.Equals( t.Namespace
-                                            , "AMP.Network.Packets.Implementation"
-                                            , StringComparison.Ordinal
-                                            )
-                        )
                     .ToArray();
 
             for(int i = 0; i < typelist.Length; i++) {
@@ -182,5 +177,8 @@ namespace Netamite.Network.Packet {
         public void Dispose() {
             
         }
+    
+        public virtual void ProcessClient() { }
+        public virtual void ProcessServer() { }
     }
 }

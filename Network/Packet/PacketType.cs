@@ -1,53 +1,13 @@
-﻿namespace Netamite.Network.Packet {
+﻿using Netamite.Network.Packet.Attributes;
+
+namespace Netamite.Network.Packet {
     public enum PacketType : byte {
         UNKNOWN                 = 0,
 
-        WELCOME                 = 1,
-        DISCONNECT,
-        ERROR,
-        MESSAGE,
-        CLEAR_DATA,
-
-        PLAYER_DATA             = 10,
-        PLAYER_POSITION,
-        PLAYER_EQUIPMENT,
-        PLAYER_RAGDOLL,
-        PLAYER_HEALTH_SET,
-        PLAYER_HEALTH_CHANGE,
-
-        ITEM_SPAWN              = 20,
-        ITEM_DESPAWN,
-        ITEM_POSITION,
-        ITEM_OWNER,
-        ITEM_SNAPPING_SNAP,
-        ITEM_SNAPPING_UNSNAP,
-        ITEM_IMBUE,
-
-        PREPARE_LEVEL_CHANGE    = 38,
-        DO_LEVEL_CHANGE         = 39,
-
-        CREATURE_SPAWN          = 40,
-        CREATURE_POSITION,
-        CREATURE_HEALTH_SET,
-        CREATURE_HEALTH_CHANGE,
-        CREATURE_DESPAWN,
-        CREATURE_PLAY_ANIMATION,
-        CREATURE_RAGDOLL,
-        CREATURE_SLICE,
-        CREATURE_OWNER,
-
-        MAGIC_SET               = 60,
-        MAGIC_UPDATE,
-
-
-        DISPLAY_TEXT            = 250,
-
-        ALLOW_TRANSMISSION      = 251,
-        PING                    = 252,
-        TIME_SYNCHRONIZATION    = 249,
-
-        SERVER_INFO             = 253,
-        SERVER_JOIN             = 254,
-        SERVER_STATUS_PING      = 255
+        ESTABLISH_CONNECTION    = 1,
+        ERROR                   = 2,
+        DISCONNECT              = 3,
+        WELCOME                 = 4,
+        PING                    = 5,
     }
 }
