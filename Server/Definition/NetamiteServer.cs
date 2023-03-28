@@ -1,14 +1,12 @@
-﻿using Netamite.Network.Packet;
+﻿using Netamite.Helper;
+using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
-using Netamite.Network.Socket;
 using Netamite.Security;
 using Netamite.Server.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Sockets;
-using System.Runtime.InteropServices;
 
 namespace Netamite.Server.Definition {
     public class NetamiteServer : PacketProcessor {
@@ -48,13 +46,16 @@ namespace Netamite.Server.Definition {
         }
 
 
+        public Action<long> OnStart;
         public Action<ClientInformation> OnConnect;
         public Action<ClientInformation> OnDisconnect;
         public Action<ClientInformation, NetPacket> OnDataReceived;
         public Action<ClientInformation, NetPacket> OnDataSent;
 
 
-        public NetamiteServer() { }
+        public NetamiteServer() {
+            NetPacket.BuildPacketImplementationCache();
+        }
 
         public NetamiteServer(int maxClients) : base() {
             this.MaxClients = maxClients;
@@ -109,6 +110,16 @@ namespace Netamite.Server.Definition {
         /// Please use the function on a super class.
         /// </summary>
         public virtual void Start() { }
+
+        private long startDelay = 0;
+        internal void Start(bool start) {
+            if(start) {
+                startDelay = TimeHelper.Millis;
+            } else {
+                long length = TimeHelper.Millis - startDelay;
+                OnStart.Invoke(length);
+            }
+        }
 
         public void SendToAll(NetPacket p) {
             if(p.IsReliable())

@@ -1,6 +1,4 @@
-﻿using Netamite.Network.Packet.Attributes;
-
-namespace Netamite.Network.Packet {
+﻿namespace Netamite.Network.Packet {
     public enum PacketType : byte {
         UNKNOWN                 = 0,
 

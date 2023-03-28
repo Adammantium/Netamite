@@ -1,11 +1,4 @@
-﻿using Netamite.Logging;
-using Netamite.Network.Packet.Attributes;
-using Netamite.Server.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Netamite.Network.Packet.Attributes;
 
 namespace Netamite.Network.Packet.Implementations {
     [PacketDefinition((byte) PacketType.ESTABLISH_CONNECTION)]

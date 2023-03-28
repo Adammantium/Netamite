@@ -1,7 +1,4 @@
-﻿using Netamite.Client.Definition;
-using Netamite.Network.Packet.Attributes;
-using Netamite.Server.Data;
-using Netamite.Server.Definition;
+﻿using Netamite.Network.Packet.Attributes;
 
 namespace Netamite.Network.Packet.Implementations {
     [PacketDefinition((byte) PacketType.ERROR)]

@@ -4,8 +4,6 @@ using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Socket;
-using Netamite.Security;
-using System;
 using System.Net;
 using System.Threading;
 
@@ -20,7 +18,7 @@ namespace Netamite.Client.Implementation {
 
         public override string TYPE => "SOCKET";
 
-        public IPClient(string address, int port) {
+        public IPClient(string address, int port) : base() {
             this.ip = NetworkUtil.GetIP(address);
             this.port = port;
         }

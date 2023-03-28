@@ -1,6 +1,5 @@
 ﻿using Netamite.Logging;
 using Netamite.Network.Packet;
-using Netamite.Network.Packet.Implementations;
 using System;
 using System.IO;
 using System.Net.Sockets;
@@ -61,7 +60,7 @@ namespace Netamite.Network.Socket {
         public TcpSocket(TcpClient client) {
             _client = client;
 
-            client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, false);
+            client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
             client.ReceiveBufferSize = transmission_bits;
             client.SendBufferSize = transmission_bits;
             _stream = client.GetStream();
@@ -73,7 +72,7 @@ namespace Netamite.Network.Socket {
 
         public TcpSocket(string ip, int port) {
             _client = new TcpClient();
-            client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, false);
+            client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
             client.ReceiveBufferSize = transmission_bits;
             client.SendBufferSize = transmission_bits;
 
@@ -140,6 +139,7 @@ namespace Netamite.Network.Socket {
                     byte[] data = packet.GetData(true);
 
                     stream.WriteAsync(data, 0, data.Length);
+                    stream.FlushAsync();
                 }
             } catch(SocketException) {
 

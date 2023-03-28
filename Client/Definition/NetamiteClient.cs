@@ -1,5 +1,4 @@
-﻿using Netamite.Logging;
-using Netamite.Network.Packet;
+﻿using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
 using Netamite.Security;
@@ -52,11 +51,20 @@ namespace Netamite.Client.Definition {
             get { return serverTimestampOffset; }
         }
 
+        internal long _Ping;
+        public long Ping {
+            get { return _Ping; } 
+        }
+
         public Action<NetPacket> OnDataReceived;
 
         public Action onConnect;
         public Action<string> onConnectionError;
         public Action onDisconnect;
+
+        public NetamiteClient() {
+            NetPacket.BuildPacketImplementationCache();
+        }
 
         internal ulong GetBytesSent() {
             ulong bytesSent = unreliableSent + reliableSent;

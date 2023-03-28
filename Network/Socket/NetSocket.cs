@@ -69,12 +69,12 @@ namespace Netamite.Network.Socket {
             bytesReceived += packet.GetData().Length;
         }
 
-        internal ConcurrentQueue<NetPacket> processPacketQueue = new ConcurrentQueue<NetPacket>();
+        internal BlockingCollection<NetPacket> processPacketQueue = new BlockingCollection<NetPacket>();
         internal void QueuePacket(NetPacket packet) {
             if(packet == null) return;
             if(closing) return;
 
-            processPacketQueue.Enqueue(packet);
+            processPacketQueue.TryAdd(packet);
         }
 
         internal void ProcessSendQueue() {
@@ -89,17 +89,15 @@ namespace Netamite.Network.Socket {
                 pe.Reset();
                 #endif
                 try {
-                    while(processPacketQueue.TryDequeue(out packet)) {
-                        bytesSent += packet.GetData().Length;
+                    packet = processPacketQueue.Take(); // This will wait non blocking for an item to arrive at the queue
+                    bytesSent += packet.GetData().Length;
 
-                        if(packet == null) continue;
-                        SendPacket(packet);
+                    if(packet == null) continue;
+                    SendPacket(packet);
 
-                        #if PERFORMANCE_WARNING
-                        pe.HasPerformanceIssue();
-                        #endif
-                    }
-                    Thread.Sleep(1);
+                    #if PERFORMANCE_WARNING
+                    pe.HasPerformanceIssue();
+                    #endif
                 }catch(ThreadAbortException) { 
                     return;
                 }

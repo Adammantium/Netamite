@@ -1,4 +1,4 @@
-﻿using Netamite.Client.Implementation;
+﻿using Netamite.Helper;
 using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
@@ -8,10 +8,8 @@ using Netamite.Server.Definition;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace Netamite.Server.Implementation {
     public class IPServer : NetamiteServer {
@@ -62,6 +60,7 @@ namespace Netamite.Server.Implementation {
         }
 
         public override void Start() {
+            base.Start(true);
             base.Start();
 
             tcpListener = new TcpListener(IPAddress.Any, TcpPort);
@@ -70,6 +69,7 @@ namespace Netamite.Server.Implementation {
 
             udpListener = new UdpClient(UdpPort);
             udpListener.BeginReceive(UDPRequestCallback, null);
+            base.Start(false);
         }
 
 
@@ -85,7 +85,7 @@ namespace Netamite.Server.Implementation {
             TcpSocket socket = new TcpSocket(tcpClient);
 
             Log.Debug(Defines.SERVER, $"Incoming connection from {tcpClient.Client.RemoteEndPoint}... (" + waitingForConnectionSockets.Count + " still waiting)");
-            waitingForConnectionSockets.TryAdd(socket, DateTimeOffset.Now.ToUnixTimeMilliseconds());
+            waitingForConnectionSockets.TryAdd(socket, TimeHelper.Millis);
             socket.onPacket += (packet) => {
                 WaitForConnection(socket, packet);
             };

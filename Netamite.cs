@@ -1,11 +1,12 @@
 ﻿using Netamite.Client.Definition;
 using Netamite.Client.Implementation;
+using Netamite.Helper;
 using Netamite.Logging;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Server.Definition;
 using Netamite.Server.Implementation;
 using System;
-using System.Net.Sockets;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Netamite {
@@ -13,8 +14,9 @@ namespace Netamite {
         public static void Main(string[] args) {
             Console.WriteLine("  _   _      _                  _ _       \r\n | \\ | |    | |                (_) |      \r\n |  \\| | ___| |_ __ _ _ __ ___  _| |_ ___ \r\n | . ` |/ _ \\ __/ _` | '_ ` _ \\| | __/ _ \\\r\n | |\\  |  __/ || (_| | | | | | | | ||  __/\r\n |_| \\_|\\___|\\__\\__,_|_| |_| |_|_|\\__\\___|\r\n                                          \r\n                                          ");
 
-            IPServer server = new IPServer();
+            short port = 12345;
 
+            NetamiteServer server = new IPServer(port);
             server.OnConnect += (ci) => {
                 Log.Info(Defines.SERVER, "+ " + ci.ClientName);
             };
@@ -24,12 +26,15 @@ namespace Netamite {
             server.OnDataReceived += (ci, packet) => {
                 Log.Info(Defines.SERVER, "> " + ci.ClientName + " " + packet);
             };
+            server.OnStart += (delay) => {
+                Log.Info($"Started after {delay}ms.");
+            };
             server.ConnectToken = "";
             server.Start();
 
 
 
-            NetamiteClient client = new IPClient("127.0.0.1", server.TcpPort);
+            NetamiteClient client = new IPClient("127.0.0.1", port);
             client.ClientName = "Client 1";
 
             client.onConnect += () => {
@@ -44,21 +49,19 @@ namespace Netamite {
             client.OnDataReceived += (packet) => {
                 Log.Info(Defines.CLIENT, "> " + packet);
             };
-
             client.Connect("");
 
-
-
             while (true) {
-                //Log.Err(client.isConnected);
                 Thread.Sleep(100);
                 if(client.isConnected) {
                     Log.Debug("SEND TCP");
-                    client.SendReliable(new PingPacket(0));
+                    for(int i = 0; i < 100; i++) {
+                        client.SendReliable(new PingPacket());
+                    }
 
                     Thread.Sleep(500);
                     Log.Debug("SEND UDP");
-                    client.SendUnreliable(new PingPacket(0));
+                    client.SendUnreliable(new PingPacket());
                     Thread.Sleep(500);
 
                     client.Disconnect();

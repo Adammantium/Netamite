@@ -2,12 +2,6 @@
 using Netamite.Network.Packet.Attributes;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Netamite.Network.Packet.Implementations {
     [PacketDefinition((byte) PacketType.DISCONNECT)]

@@ -9,9 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Netamite</RootNamespace>
     <AssemblyName>Netamite</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -55,6 +56,7 @@
     <Compile Include="Datatype\Vector3.cs" />
     <Compile Include="Defines.cs" />
     <Compile Include="Extension\MemberInfoExtension.cs" />
+    <Compile Include="Helper\TimeHelper.cs" />
     <Compile Include="Logging\Log.cs" />
     <Compile Include="Netamite.cs" />
     <Compile Include="Client\Definition\NetamiteClient.cs" />
@@ -81,6 +83,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Server\Implementation\Steam\SteamServer.cs" />
     <Compile Include="Server\Implementation\IP\IPServer.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

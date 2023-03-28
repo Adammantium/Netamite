@@ -1,7 +1,9 @@
-﻿using Netamite.Logging;
+﻿using Netamite.Client.Definition;
+using Netamite.Helper;
+using Netamite.Logging;
 using Netamite.Network.Packet.Attributes;
 using Netamite.Server.Data;
-using System;
+using Netamite.Server.Definition;
 
 namespace Netamite.Network.Packet.Implementations {
     [PacketDefinition((byte) PacketType.PING)]
@@ -10,12 +12,27 @@ namespace Netamite.Network.Packet.Implementations {
 
         public PingPacket() {
             if(timestamp <= 0) {
-                timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                timestamp = TimeHelper.Millis;
             }
         }
 
         public PingPacket(long timestamp) {
             this.timestamp = timestamp;
+        }
+
+        public override bool ProcessClient(NetamiteClient client) {
+            if(timestamp > 0) {
+                client._Ping = TimeHelper.Millis - timestamp;
+                Log.Info(client._Ping);
+            }
+            return true;
+        }
+
+        public override bool ProcessServer(NetamiteServer server, ClientInformation client) {
+            if(timestamp > 0) {
+                server.SendTo(client, this);
+            }
+            return true;
         }
     }
 }

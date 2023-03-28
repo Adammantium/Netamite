@@ -12,23 +12,33 @@ using System.Reflection;
 namespace Netamite.Network.Packet {
     [PacketDefinition((byte) PacketType.UNKNOWN)]
     public class NetPacket : IDisposable {
-        private static ConcurrentDictionary<PacketType, Type> packetTypes = new ConcurrentDictionary<PacketType, Type>();
+        private static ConcurrentDictionary<short, Type> packetTypes = new ConcurrentDictionary<short, Type>();
+
+        internal static void BuildPacketImplementationCache() {
+            Type[] typelist = Assembly.GetAssembly(typeof(NetPacket)).GetTypes().ToArray();
+
+            for(int i = 0; i < typelist.Length; i++) {
+                short thisPacketType = (short) getPacketType(typelist[i]);
+
+                if(packetTypes.ContainsKey(thisPacketType)) continue;
+                packetTypes.TryAdd(thisPacketType, typelist[i]);
+            }
+        }
 
         private static Type GetPacketImplementation(PacketType packetType) {
             if(packetType == PacketType.UNKNOWN) return null;
 
-            if(packetTypes.ContainsKey(packetType)) {
-                return packetTypes[packetType];
+            if(packetTypes.ContainsKey((short) packetType)) {
+                return packetTypes[(short) packetType];
             }
 
-            Type[] typelist = Assembly.GetAssembly(typeof(NetPacket)).GetTypes()
-                    .ToArray();
+            Type[] typelist = Assembly.GetAssembly(typeof(NetPacket)).GetTypes().ToArray();
 
             for(int i = 0; i < typelist.Length; i++) {
                 PacketType thisPacketType = (PacketType) getPacketType(typelist[i]);
                 if(thisPacketType == packetType) {
-                    if(packetTypes.ContainsKey(thisPacketType)) continue;
-                    packetTypes.TryAdd(thisPacketType, typelist[i]);
+                    if(packetTypes.ContainsKey((short) thisPacketType)) continue;
+                    packetTypes.TryAdd((short) thisPacketType, typelist[i]);
                     return typelist[i];
                 }
             }
