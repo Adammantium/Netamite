@@ -1,4 +1,6 @@
-﻿using Netamite.Network.Packet.Attributes;
+﻿using Netamite.Logging;
+using Netamite.Network.Packet.Attributes;
+using Netamite.Server.Data;
 using System;
 
 namespace Netamite.Network.Packet.Implementations {

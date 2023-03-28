@@ -64,7 +64,9 @@
     <Compile Include="Network\Packet\Implementations\ErrorPacket.cs" />
     <Compile Include="Network\Packet\Implementations\EstablishConnectionPacket.cs" />
     <Compile Include="Network\Packet\Implementations\PingPacket.cs" />
+    <Compile Include="Network\Packet\Implementations\TimeSynchronizationPacket.cs" />
     <Compile Include="Network\Packet\Implementations\WelcomePacket.cs" />
+    <Compile Include="Network\Processor\PacketProcessor.cs" />
     <Compile Include="Network\Socket\NetSocket.cs" />
     <Compile Include="Network\Packet\Attributes\SyncedVar.cs" />
     <Compile Include="Network\Packet\Exceptions\PacketMismatch.cs" />

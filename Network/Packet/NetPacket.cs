@@ -1,6 +1,9 @@
-﻿using Netamite.Extension;
+﻿using Netamite.Client.Definition;
+using Netamite.Extension;
 using Netamite.Network.Packet.Attributes;
 using Netamite.Network.Packet.Exceptions;
+using Netamite.Server.Data;
+using Netamite.Server.Definition;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -178,7 +181,7 @@ namespace Netamite.Network.Packet {
             
         }
     
-        public virtual void ProcessClient() { }
-        public virtual void ProcessServer() { }
+        public virtual bool ProcessClient(NetamiteClient client) { return false; }
+        public virtual bool ProcessServer(NetamiteServer server, ClientInformation client) { return false; }
     }
 }

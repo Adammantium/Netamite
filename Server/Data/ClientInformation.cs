@@ -8,6 +8,8 @@ namespace Netamite.Server.Data {
         public string   ClientName;
         public DateTime ConnectionTimestamp;
 
+        internal long lastTimeSyncStamp;
+
         public Action<NetPacket> sendReliablePacket;
         public Action<NetPacket> sendUnreliablePacket;
 

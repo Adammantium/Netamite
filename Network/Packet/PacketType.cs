@@ -9,5 +9,6 @@ namespace Netamite.Network.Packet {
         DISCONNECT              = 3,
         WELCOME                 = 4,
         PING                    = 5,
+        TIME_SYNCHRONIZATION    = 6,
     }
 }

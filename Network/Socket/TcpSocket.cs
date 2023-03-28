@@ -1,5 +1,8 @@
-﻿using Netamite.Network.Packet;
+﻿using Netamite.Logging;
+using Netamite.Network.Packet;
+using Netamite.Network.Packet.Implementations;
 using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -85,9 +88,9 @@ namespace Netamite.Network.Socket {
                 try {
                     client.EndConnect(result);
                 }catch(Exception e) { 
-                    //Log.Err(e); //TODO
+                    Log.Err(e);
                 }
-                //Log.Err("Could not connect to server, timed out"); //TODO
+                Log.Err("Could not connect to server, timed out");
                 return;
             }
         }
@@ -124,8 +127,9 @@ namespace Netamite.Network.Socket {
                 }
             } catch(SocketException e) {
                 Disconnect();
-                //Log.Err($"Error receiving TCP data: {e}"); //TODO
-            }
+                Log.Err($"Error receiving TCP data: {e}");
+            } catch(ObjectDisposedException) { return; } catch(IOException) { return; }
+
             if(stream != null)
                 stream.BeginRead(buffer, 0, transmission_bits, ReceiveCallback, null);
         }
@@ -140,7 +144,7 @@ namespace Netamite.Network.Socket {
             } catch(SocketException) {
 
             } catch(Exception e) {
-                //Log.Err($"Error sending data to player via TCP: {e}"); //TODO
+                Log.Err($"Error sending data to player via TCP: {e}");
             }
         }
 

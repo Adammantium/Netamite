@@ -1,5 +1,6 @@
 ﻿using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
+using Netamite.Network.Processor;
 using Netamite.Network.Socket;
 using Netamite.Security;
 using Netamite.Server.Data;
@@ -10,11 +11,14 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace Netamite.Server.Definition {
-    public class NetamiteServer {
+    public class NetamiteServer : PacketProcessor {
 
         public Dictionary<ulong, ClientInformation> _clients = new Dictionary<ulong, ClientInformation>();
         public ClientInformation[] Clients {
             get { return _clients.Values.ToArray(); }
+        }
+        public int ConnectedClients {
+            get { return _clients.Count; }
         }
 
         private int _MaxClients = int.MaxValue;
@@ -32,7 +36,12 @@ namespace Netamite.Server.Definition {
         /// It will automatically get hashed with SHA256 when supplied this way.
         /// </summary>
         public string ConnectToken {
-            set { _ConnectToken = Hashing.SHA256(value); }
+            set {
+                if(String.IsNullOrEmpty(value))
+                    _ConnectToken = string.Empty;
+                else
+                    _ConnectToken = Hashing.SHA256(value);
+            }
         }
         public bool HasConnectToken {
             get { return _ConnectToken != null && _ConnectToken.Length > 0; }
@@ -67,7 +76,7 @@ namespace Netamite.Server.Definition {
         }
 
         internal static ulong currentId;
-        internal void ClientJoined(ClientInformation clientInformation) {
+        internal virtual void ClientJoined(ClientInformation clientInformation) {
             if(clientInformation.ClientId <= 0) {
                 clientInformation.ClientId = ++currentId;
             }
@@ -76,13 +85,23 @@ namespace Netamite.Server.Definition {
 
             SendReliableTo(clientInformation, new WelcomePacket(clientInformation.ClientId));
 
+            InitializeTimeSync(clientInformation);
+
             OnConnect?.Invoke(clientInformation);
         }
 
-        internal void ClientLeft(ClientInformation clientInformation) {
+        internal virtual void ClientLeft(ClientInformation clientInformation) {
             _clients.Remove(clientInformation.ClientId);
 
             OnDisconnect?.Invoke(clientInformation);
+        }
+
+        internal void ProcessPacket(ClientInformation client, NetPacket packet) {
+            // Check if the Packet has a built in Implementation
+            if(!ProcessPacket(packet, this, client)) {
+                // If there is no built in Implementation, just continue
+                OnDataReceived?.Invoke(client, packet);
+            }
         }
 
         /// <summary>
@@ -142,5 +161,26 @@ namespace Netamite.Server.Definition {
         }
 
         public virtual void SendUnreliableTo(ClientInformation client, NetPacket p) { }
+
+
+        /// <summary>
+        /// Initialized a Time-Sync to all clients, to messure the time offset between client and server
+        /// </summary>
+        private void InitializeTimeSync() {
+            foreach(ClientInformation client in _clients.Values) {
+                InitializeTimeSync(client);
+            }
+        }
+
+        /// <summary>
+        /// Initialized a Time-Sync to the client, to messure the time offset between client and server
+        /// </summary>
+        /// <param name="client">The Client to initialize the time sync to</param>
+        private void InitializeTimeSync(ClientInformation client) {
+            TimeSynchronizationPacket timeSynchronizationPacket = new TimeSynchronizationPacket(); // UNIX Timestamp will automatically be set
+            client.lastTimeSyncStamp = timeSynchronizationPacket.server_timestamp;
+
+            SendReliableTo(client, timeSynchronizationPacket);
+        }
     }
 }

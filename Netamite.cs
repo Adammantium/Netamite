@@ -5,6 +5,7 @@ using Netamite.Network.Packet.Implementations;
 using Netamite.Server.Definition;
 using Netamite.Server.Implementation;
 using System;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace Netamite {
@@ -15,13 +16,13 @@ namespace Netamite {
             IPServer server = new IPServer();
 
             server.OnConnect += (ci) => {
-                Console.WriteLine("+ " + ci.ClientName);
+                Log.Info(Defines.SERVER, "+ " + ci.ClientName);
             };
             server.OnDisconnect += (ci) => {
-                Console.WriteLine("- " + ci.ClientName);
+                Log.Info(Defines.SERVER, "- " + ci.ClientName);
             };
             server.OnDataReceived += (ci, packet) => {
-                Console.WriteLine("> " + ci.ClientName + " " + packet);
+                Log.Info(Defines.SERVER, "> " + ci.ClientName + " " + packet);
             };
             server.ConnectToken = "";
             server.Start();
@@ -29,12 +30,19 @@ namespace Netamite {
 
 
             NetamiteClient client = new IPClient("127.0.0.1", server.TcpPort);
-            
+            client.ClientName = "Client 1";
+
             client.onConnect += () => {
-                Console.WriteLine("CONNECTED");
+                Log.Info(Defines.CLIENT, "CONNECTED");
+            };
+            client.onConnectionError += (message) => {
+                Log.Info(Defines.CLIENT, "CONNECTION REFUSED: " + message);
             };
             client.onDisconnect += () => {
-                Console.WriteLine("DISCONNECTED");
+                Log.Info(Defines.CLIENT, "DISCONNECTED");
+            };
+            client.OnDataReceived += (packet) => {
+                Log.Info(Defines.CLIENT, "> " + packet);
             };
 
             client.Connect("");
@@ -52,6 +60,8 @@ namespace Netamite {
                     Log.Debug("SEND UDP");
                     client.SendUnreliable(new PingPacket(0));
                     Thread.Sleep(500);
+
+                    client.Disconnect();
                 }
             }
         }

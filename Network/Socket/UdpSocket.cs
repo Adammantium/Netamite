@@ -1,4 +1,5 @@
 ﻿using AMP.Network.Helper;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using System;
 using System.Net;
@@ -46,7 +47,7 @@ namespace Netamite.Network.Socket {
                     client.SendAsync(data, data.Length);
                 }
             } catch(Exception e) {
-                //Log.Err($"Error sending data to {endPoint} via UDP: {e}"); //TODO
+                Log.Err($"Error sending data to {endPoint} via UDP: {e}");
             }
         }
 
@@ -67,7 +68,7 @@ namespace Netamite.Network.Socket {
                     HandleData(array);
                 }
             } catch(Exception e) {
-                //Log.Err("Failed to receive data with udp, " + e); //TODO
+                Log.Err("Failed to receive data with udp, " + e);
                 Disconnect();
             }
             if(client != null)

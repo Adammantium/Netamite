@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Logging;
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -16,13 +17,13 @@ namespace AMP.Network.Helper {
                             try {
                                 address = addresslist.First(addr => addr.AddressFamily == AddressFamily.InterNetwork).ToString();
                             }catch(Exception) {
-                                //Log.Err($"No IPv4 could be resolved for {address}."); //TODO
+                                Log.Err($"No IPv4 could be resolved for {address}.");
                             }
                         } else {
-                            //Log.Err($"No addresses found for {address}"); //TODO
+                            Log.Err($"No addresses found for {address}");
                         }
                     }catch(Exception) {
-                        //Log.Err($"Unable to resolve address for {address}. Check you internet connection."); //TODO
+                        Log.Err($"Unable to resolve address for {address}. Check you internet connection.");
                     }
                 }
             }

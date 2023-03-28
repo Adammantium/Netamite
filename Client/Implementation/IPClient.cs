@@ -14,7 +14,6 @@ namespace Netamite.Client.Implementation {
 
         private string ip;
         private int port;
-        private string password = "";
 
         private TcpSocket tcp;
         private UdpSocket udp;
@@ -26,22 +25,22 @@ namespace Netamite.Client.Implementation {
             this.port = port;
         }
 
-        public override void Connect(string password = "") {
+        public override void Connect(string accessToken = "") {
             _STATE = "CONNECTING";
 
             Log.Info(Defines.CLIENT, $"Connecting to {ip}:{port}...");
-            this.password = Hashing.SHA256(password);
+            ConnectToken = accessToken;
 
             tcp = new TcpSocket(ip, port);
             tcp.onPacket += AwaitingConnectionHandler;
             tcp.onDisconnect += onConnectionAbort;
 
-            isConnected = tcp.client.Connected;
-            if(!isConnected) {
+            if(!tcp.client.Connected) {
                 _STATE = "FAILED";
                 Disconnect();
+                return;
             } else {
-                tcp.QueuePacket(new EstablishConnectionPacket("NAME", this.password));
+                EstablishConnection();
                 onConnect += LinkUDP;
             }
 
@@ -50,13 +49,13 @@ namespace Netamite.Client.Implementation {
 
         private void OnConnect() {
             tcp.onPacket = null;
-            tcp.onPacket = OnPacketReceived;
+            tcp.onPacket = onTcpPacketReceived;
         }
 
         private void LinkUDP() {
             udp = new UdpSocket(ip, port);
             udp.Connect(((IPEndPoint) tcp.client.Client.LocalEndPoint).Port);
-            udp.onPacket = OnPacketReceived;
+            udp.onPacket = onUdpPacketReceived;
 
             // Send some udp packets, one should reach the host if ports are free
             Thread udpLinkThread = new Thread(() => {
@@ -74,16 +73,6 @@ namespace Netamite.Client.Implementation {
             Disconnect();
         }
 
-        internal void onTcpPacketReceived(NetPacket p) {
-            OnPacketReceived?.Invoke(p);
-            reliableReceive += p.GetData().Length;
-        }
-
-        internal void onUdpPacketReceived(NetPacket p) {
-            OnPacketReceived?.Invoke(p);
-            unreliableReceive += p.GetData().Length;
-        }
-
         public override void Disconnect() {
             if(tcp != null) {
                 tcp.onDisconnect -= onConnectionAbort;
@@ -94,18 +83,29 @@ namespace Netamite.Client.Implementation {
                 udp.onDisconnect -= onConnectionAbort;
                 udp.Disconnect();
             }
-            Log.Info(Defines.CLIENT, "Disconnected.");
             base.Disconnect();
         }
 
         public override void SendReliable(NetPacket packet) {
-            tcp.QueuePacket(packet);
-            reliableSent += packet.GetData().Length;
+            if(tcp != null) {
+                tcp.QueuePacket(packet);
+                base.SendReliable(packet);
+            }
         }
 
         public override void SendUnreliable(NetPacket packet) {
-            udp.QueuePacket(packet);
-            unreliableSent += packet.GetData().Length;
+            if(udp != null) {
+                udp.QueuePacket(packet);
+                base.SendUnreliable(packet);
+            }
+        }
+
+        internal void onTcpPacketReceived(NetPacket p) {
+            base.OnReliableReceived(p);
+        }
+
+        internal void onUdpPacketReceived(NetPacket p) {
+            base.OnUnreliableReceived(p);
         }
     }
 }

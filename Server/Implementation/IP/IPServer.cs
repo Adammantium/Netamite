@@ -1,4 +1,5 @@
-﻿using Netamite.Logging;
+﻿using Netamite.Client.Implementation;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Socket;
@@ -127,14 +128,14 @@ namespace Netamite.Server.Implementation {
                     if(IPEndPoint.Equals(entry.Value.endPoint, clientEndPoint)) {
                         NetPacket netPacket = NetPacket.ReadPacket(data, true);
                         if(!(netPacket is WelcomePacket)) {
-                            OnDataReceived?.Invoke(_clients[entry.Key], netPacket);
+                            ProcessPacket(_clients[entry.Key], netPacket);
                         }
                         found = true;
                         break;
                     }
                 }
                 if(!found) {
-                    Log.Err(Defines.SERVER, $"Invalid UDP client tried to connect {clientEndPoint}");
+                    //Log.Err(Defines.SERVER, $"Invalid UDP client tried to connect {clientEndPoint}");
                 }
             } catch(Exception e) {
                 Log.Err(Defines.SERVER, $"Error receiving UDP data: {e}");
@@ -156,7 +157,7 @@ namespace Netamite.Server.Implementation {
 
                     socket.onPacket = null;
                     socket.onPacket += (packet) => {
-                        OnDataReceived?.Invoke(clientInformation, packet);
+                        ProcessPacket(clientInformation, packet);
                     };
 
                     ClientJoined(clientInformation);
@@ -169,6 +170,18 @@ namespace Netamite.Server.Implementation {
             }
         }
 
+        internal override void ClientLeft(ClientInformation client) {
+            if(tcpConnections.ContainsKey(client.ClientId)) {
+                SendReliableTo(client, new DisconnectPacket(client.ClientId, "Connection closed"));
+                tcpConnections.Remove(client.ClientId);
+            }
+            if(udpConnections.ContainsKey(client.ClientId)) {
+                udpConnections.Remove(client.ClientId);
+            }
+            SendReliableToAllExcept(new DisconnectPacket(client.ClientId, "Connection closed"), client.ClientId);
+
+            base.ClientLeft(client);
+        }
 
         // Reliable
         public override void SendReliableTo(ClientInformation client, NetPacket p) {
