@@ -23,7 +23,6 @@ namespace Netamite.Network.Packet.Implementations {
         public override bool ProcessClient(NetamiteClient client) {
             if(timestamp > 0) {
                 client._Ping = TimeHelper.Millis - timestamp;
-                Log.Info(client._Ping);
             }
             return true;
         }

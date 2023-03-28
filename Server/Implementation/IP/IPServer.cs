@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace Netamite.Server.Implementation {
     public class IPServer : NetamiteServer {
@@ -42,8 +43,8 @@ namespace Netamite.Server.Implementation {
         private static UdpClient udpListener;
 
         internal ConcurrentDictionary<NetSocket, long> waitingForConnectionSockets = new ConcurrentDictionary<NetSocket, long>();
-        internal Dictionary<ulong, TcpSocket> tcpConnections = new Dictionary<ulong, TcpSocket>();
-        internal Dictionary<ulong, UdpSocket> udpConnections = new Dictionary<ulong, UdpSocket>();
+        internal ConcurrentDictionary<ulong, TcpSocket> tcpConnections = new ConcurrentDictionary<ulong, TcpSocket>();
+        internal ConcurrentDictionary<ulong, UdpSocket> udpConnections = new ConcurrentDictionary<ulong, UdpSocket>();
 
         public IPServer() : base() { }
         public IPServer(short port) : base() {
@@ -81,7 +82,7 @@ namespace Netamite.Server.Implementation {
                 tcpClient = tcpListener.EndAcceptTcpClient(result);
             } catch(ObjectDisposedException) { return; } // Happens when closing a already disposed socket, so we can just ignore it
             tcpListener.BeginAcceptTcpClient(TCPRequestCallback, null);
-            
+
             TcpSocket socket = new TcpSocket(tcpClient);
 
             Log.Debug(Defines.SERVER, $"Incoming connection from {tcpClient.Client.RemoteEndPoint}... (" + waitingForConnectionSockets.Count + " still waiting)");
@@ -111,7 +112,7 @@ namespace Netamite.Server.Implementation {
                         // If no udp is connected, then link up
                         if(!udpConnections.ContainsKey(clientId) && _clients.ContainsKey(clientId)) {
                             UdpSocket udpSocket = new UdpSocket(clientEndPoint);
-                            udpConnections.Add(clientId, new UdpSocket(clientEndPoint));
+                            udpConnections.TryAdd(clientId, new UdpSocket(clientEndPoint));
 
                             ClientInformation clientInformation = _clients[clientId];
                             udpSocket.onPacket = null;
@@ -153,7 +154,8 @@ namespace Netamite.Server.Implementation {
                     ClientInformation clientInformation = new ClientInformation();
                     clientInformation.ClientName = ecp.name;
 
-                    tcpConnections.Add(currentId + 1, socket);
+                    clientInformation.ClientId = (ulong)Interlocked.Increment(ref currentId);
+                    tcpConnections.TryAdd(clientInformation.ClientId, socket);
 
                     socket.onPacket = null;
                     socket.onPacket += (packet) => {
@@ -173,10 +175,10 @@ namespace Netamite.Server.Implementation {
         internal override void ClientLeft(ClientInformation client) {
             if(tcpConnections.ContainsKey(client.ClientId)) {
                 SendReliableTo(client, new DisconnectPacket(client.ClientId, "Connection closed"));
-                tcpConnections.Remove(client.ClientId);
+                tcpConnections.TryRemove(client.ClientId, out _);
             }
             if(udpConnections.ContainsKey(client.ClientId)) {
-                udpConnections.Remove(client.ClientId);
+                udpConnections.TryRemove(client.ClientId, out _);
             }
             SendReliableToAllExcept(new DisconnectPacket(client.ClientId, "Connection closed"), client.ClientId);
 

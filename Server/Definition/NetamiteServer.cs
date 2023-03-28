@@ -5,13 +5,15 @@ using Netamite.Network.Processor;
 using Netamite.Security;
 using Netamite.Server.Data;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Netamite.Server.Definition {
     public class NetamiteServer : PacketProcessor {
 
-        public Dictionary<ulong, ClientInformation> _clients = new Dictionary<ulong, ClientInformation>();
+        public ConcurrentDictionary<ulong, ClientInformation> _clients = new ConcurrentDictionary<ulong, ClientInformation>();
         public ClientInformation[] Clients {
             get { return _clients.Values.ToArray(); }
         }
@@ -76,13 +78,13 @@ namespace Netamite.Server.Definition {
             return null;
         }
 
-        internal static ulong currentId;
+        internal static int currentId;
         internal virtual void ClientJoined(ClientInformation clientInformation) {
             if(clientInformation.ClientId <= 0) {
-                clientInformation.ClientId = ++currentId;
+                clientInformation.ClientId = (ulong) Interlocked.Increment(ref currentId);
             }
             clientInformation.ConnectionTimestamp = DateTime.Now;
-            _clients.Add(clientInformation.ClientId, clientInformation);
+            _clients.TryAdd(clientInformation.ClientId, clientInformation);
 
             SendReliableTo(clientInformation, new WelcomePacket(clientInformation.ClientId));
 
@@ -92,7 +94,7 @@ namespace Netamite.Server.Definition {
         }
 
         internal virtual void ClientLeft(ClientInformation clientInformation) {
-            _clients.Remove(clientInformation.ClientId);
+            _clients.TryRemove(clientInformation.ClientId, out _);
 
             OnDisconnect?.Invoke(clientInformation);
         }

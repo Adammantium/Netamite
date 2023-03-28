@@ -1,8 +1,10 @@
-﻿using Netamite.Network.Packet;
+﻿using Netamite.Logging;
+using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
 using Netamite.Security;
 using System;
+using System.Threading;
 
 namespace Netamite.Client.Definition {
     public class NetamiteClient : PacketProcessor {
@@ -84,7 +86,14 @@ namespace Netamite.Client.Definition {
             return bytesReceive;
         }
 
-        public virtual void Connect(string token = "") { }
+        public virtual void Connect(string accessToken = "") {
+            if(isConnected) {
+                Disconnect();
+            }
+            _STATE = "CONNECTING";
+            ClientId = 0;
+            ConnectToken = accessToken;
+        }
 
         public virtual void Disconnect() {
             if(isConnected) {
@@ -115,19 +124,24 @@ namespace Netamite.Client.Definition {
         }
 
         public void EstablishConnection() {
-            SendReliable(new EstablishConnectionPacket(_ClientName, _ConnectToken));
+            while(STATE.Equals("CONNECTING")) {
+                SendReliable(new EstablishConnectionPacket(_ClientName, _ConnectToken));
+                Thread.Sleep(1000);
+            }
         }
 
         public void AwaitingConnectionHandler(NetPacket packet) {
             if(packet is WelcomePacket) {
-                OnDataReceived -= AwaitingConnectionHandler;
+                if(!isConnected) {
+                    OnDataReceived -= AwaitingConnectionHandler;
 
-                ClientId = ((WelcomePacket) packet).ClientId;
+                    ClientId = ((WelcomePacket) packet).ClientId;
 
-                _STATE = "CONNECTED";
-                isConnected = true;
+                    _STATE = "CONNECTED";
+                    isConnected = true;
 
-                onConnect?.Invoke();
+                    onConnect?.Invoke();
+                }
             } else if(packet is ErrorPacket) {
                 Disconnect();
                 onConnectionError?.Invoke(((ErrorPacket) packet).message);

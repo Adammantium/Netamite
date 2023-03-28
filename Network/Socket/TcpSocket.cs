@@ -3,6 +3,7 @@ using Netamite.Network.Packet;
 using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 
 namespace Netamite.Network.Socket {
@@ -139,7 +140,6 @@ namespace Netamite.Network.Socket {
                     byte[] data = packet.GetData(true);
 
                     stream.WriteAsync(data, 0, data.Length);
-                    stream.FlushAsync();
                 }
             } catch(SocketException) {
 
@@ -156,7 +156,8 @@ namespace Netamite.Network.Socket {
                     stream.Flush();
                     Thread.Sleep(100);
                 }
-
+                
+                client.Close();
                 if(client != null) client.Dispose();
                 if(stream != null) stream.Dispose();
                 _stream = null;

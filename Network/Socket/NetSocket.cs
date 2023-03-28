@@ -47,7 +47,7 @@ namespace Netamite.Network.Socket {
                         HandleData(packet);
                     }
 
-                    packet_buffer.RemoveRange(0, length + 2);
+                    if(packet_buffer.Count >= length + 2) packet_buffer.RemoveRange(0, length + 2);
                 } else {
                     break;
                 }
@@ -74,7 +74,7 @@ namespace Netamite.Network.Socket {
             if(packet == null) return;
             if(closing) return;
 
-            processPacketQueue.TryAdd(packet);
+            processPacketQueue.Add(packet);
         }
 
         internal void ProcessSendQueue() {
@@ -85,11 +85,11 @@ namespace Netamite.Network.Socket {
                                                       );
             #endif
             while(true) {
-                #if PERFORMANCE_WARNING
-                pe.Reset();
-                #endif
                 try {
                     packet = processPacketQueue.Take(); // This will wait non blocking for an item to arrive at the queue
+                    #if PERFORMANCE_WARNING
+                    pe.Reset();
+                    #endif
                     bytesSent += packet.GetData().Length;
 
                     if(packet == null) continue;

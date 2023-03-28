@@ -6,8 +6,10 @@ using Netamite.Network.Packet.Implementations;
 using Netamite.Server.Definition;
 using Netamite.Server.Implementation;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Netamite {
     public class Netamite {
@@ -32,40 +34,47 @@ namespace Netamite {
             server.ConnectToken = "";
             server.Start();
 
+            var tasks = new List<Task>();
+            for(int i = 0; i < 1; i++) {
+                int n = i + 1;
+                tasks.Add(Task.Factory.StartNew(() => Connect(n, "127.0.0.1", port)));
+            }
 
+            //then wait for all tasks to complete asyncronously
+            Task.WaitAll(tasks.ToArray());
+        }
 
-            NetamiteClient client = new IPClient("127.0.0.1", port);
-            client.ClientName = "Client 1";
+        private static void Connect(int id, string address, short port) {
+            //Thread.Sleep(id);
+            NetamiteClient client = new IPClient(address, port);
+            client.ClientName = "Client " + id;
 
             client.onConnect += () => {
-                Log.Info(Defines.CLIENT, "CONNECTED");
+                Log.Info(Defines.CLIENT + " " + id, "CONNECTED");
             };
             client.onConnectionError += (message) => {
-                Log.Info(Defines.CLIENT, "CONNECTION REFUSED: " + message);
+                Log.Info(Defines.CLIENT + " " + id, "CONNECTION REFUSED: " + message);
             };
             client.onDisconnect += () => {
-                Log.Info(Defines.CLIENT, "DISCONNECTED");
+                Log.Info(Defines.CLIENT + " " + id, "DISCONNECTED");
             };
             client.OnDataReceived += (packet) => {
-                Log.Info(Defines.CLIENT, "> " + packet);
+                Log.Info(Defines.CLIENT + " " + id, "> " + packet);
             };
             client.Connect("");
 
-            while (true) {
-                Thread.Sleep(100);
-                if(client.isConnected) {
-                    Log.Debug("SEND TCP");
-                    for(int i = 0; i < 100; i++) {
-                        client.SendReliable(new PingPacket());
-                    }
+            Thread.Sleep(1000);
+            if(client.isConnected) {
+                Log.Debug(Defines.CLIENT + " " + id, "SEND TCP");
+                client.SendReliable(new PingPacket());
 
-                    Thread.Sleep(500);
-                    Log.Debug("SEND UDP");
-                    client.SendUnreliable(new PingPacket());
-                    Thread.Sleep(500);
+                Thread.Sleep(500);
+                Log.Debug(Defines.CLIENT + " " + id, "SEND UDP");
+                client.SendUnreliable(new PingPacket());
+                Thread.Sleep(500);
 
-                    client.Disconnect();
-                }
+                client.Disconnect();
+                Thread.Sleep(1000);
             }
         }
     }

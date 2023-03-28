@@ -2,6 +2,7 @@
 using Netamite.Logging;
 using Netamite.Network.Packet;
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
@@ -67,10 +68,11 @@ namespace Netamite.Network.Socket {
                     }
                     HandleData(array);
                 }
-            } catch(Exception e) {
+            } catch(SocketException e) {
                 Log.Err("Failed to receive data with udp, " + e);
                 Disconnect();
-            }
+            } catch(ObjectDisposedException) { return; } catch(IOException) { return; }
+
             if(client != null)
                 client.BeginReceive(new AsyncCallback(this.ReceiveCallback), null);
         }

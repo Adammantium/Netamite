@@ -24,30 +24,31 @@ namespace Netamite.Client.Implementation {
         }
 
         public override void Connect(string accessToken = "") {
-            _STATE = "CONNECTING";
+            base.Connect(accessToken);
 
             Log.Info(Defines.CLIENT, $"Connecting to {ip}:{port}...");
-            ConnectToken = accessToken;
 
             tcp = new TcpSocket(ip, port);
-            tcp.onPacket += AwaitingConnectionHandler;
-            tcp.onDisconnect += onConnectionAbort;
+            tcp.onPacket = AwaitingConnectionHandler;
+            tcp.onDisconnect = onConnectionAbort;
 
             if(!tcp.client.Connected) {
                 _STATE = "FAILED";
                 Disconnect();
                 return;
             } else {
-                EstablishConnection();
+                onConnect += OnConnect;
                 onConnect += LinkUDP;
+                EstablishConnection();
             }
-
-            onConnect += OnConnect;
         }
 
         private void OnConnect() {
-            tcp.onPacket = null;
-            tcp.onPacket = onTcpPacketReceived;
+            if(tcp != null) {
+                tcp.onPacket = null;
+                tcp.onPacket = onTcpPacketReceived;
+            }
+            onConnect -= OnConnect;
         }
 
         private void LinkUDP() {
@@ -58,12 +59,15 @@ namespace Netamite.Client.Implementation {
             // Send some udp packets, one should reach the host if ports are free
             Thread udpLinkThread = new Thread(() => {
                 for(int i = 0; i < 20; i++) {
+                    if(udp == null) break;
                     udp.QueuePacket(new WelcomePacket(ClientId));
                     Thread.Sleep(100);
                 }
             });
             udpLinkThread.Name = "UdpLinker";
             udpLinkThread.Start();
+
+            onConnect -= LinkUDP;
         }
 
         private void onConnectionAbort() {
@@ -76,11 +80,16 @@ namespace Netamite.Client.Implementation {
                 tcp.onDisconnect -= onConnectionAbort;
                 tcp.QueuePacket(new DisconnectPacket(0, "Connection closed"));
                 tcp.Disconnect();
+                tcp = null;
             }
             if(udp != null) {
                 udp.onDisconnect -= onConnectionAbort;
                 udp.Disconnect();
+                udp = null;
             }
+            onConnect -= OnConnect;
+            onConnect -= LinkUDP;
+
             base.Disconnect();
         }
 

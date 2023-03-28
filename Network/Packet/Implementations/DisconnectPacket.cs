@@ -21,6 +21,7 @@ namespace Netamite.Network.Packet.Implementations {
                 client.Disconnect();
                 return true;
             }
+            return true; //TODO: REMOVE
             return base.ProcessClient(client);
         }
 
