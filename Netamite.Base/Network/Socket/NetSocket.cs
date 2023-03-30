@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Threading;
 
 namespace Netamite.Network.Socket {
-    internal class NetSocket {
+    public class NetSocket {
 
         public virtual string TYPE => "NetSocket";
 
@@ -15,14 +15,30 @@ namespace Netamite.Network.Socket {
         public Action<NetPacket> onPacket;
         public Action onDisconnect;
 
-        internal int bytesSent = 0;
-        internal int bytesReceived = 0;
+        internal int _BytesSent = 0;
+        public int BytesSent {
+            set { _BytesSent = value; }
+            get { 
+                int val = _BytesSent;
+                _BytesSent = 0;
+                return val;
+            }
+        }
+        internal int _BytesReceived = 0;
+        public int BytesReceive {
+            set { _BytesSent = value; }
+            get {
+                int val = _BytesSent;
+                _BytesSent = 0;
+                return val;
+            }
+        }
 
         private List<byte> packet_buffer = new List<byte>();
 
-        internal bool closing = false;
+        public bool closing = false;
 
-        internal void HandleData(byte[] data) {
+        public void HandleData(byte[] data) {
             packet_buffer.AddRange(data);
 
             #if PERFORMANCE_WARNING
@@ -58,7 +74,7 @@ namespace Netamite.Network.Socket {
             }
         }
 
-        internal void HandleData(NetPacket packet) {
+        public void HandleData(NetPacket packet) {
             if(packet == null) return;
             if(onPacket == null) return;
             try {
@@ -66,45 +82,40 @@ namespace Netamite.Network.Socket {
             } catch(Exception e) {
                 Log.Err(e);
             }
-            bytesReceived += packet.GetData().Length;
+            _BytesReceived += packet.GetData().Length;
         }
 
         internal BlockingCollection<NetPacket> processPacketQueue = new BlockingCollection<NetPacket>();
-        internal void QueuePacket(NetPacket packet) {
+        public void QueuePacket(NetPacket packet) {
             if(packet == null) return;
             if(closing) return;
 
             processPacketQueue.Add(packet);
         }
 
-        internal void ProcessSendQueue() {
+        public void ProcessSendQueue() {
+            ProcessSendQueue(true);
+        }
+
+        public void ProcessSendQueue(bool loop = true) {
             NetPacket packet;
-            #if PERFORMANCE_WARNING
-            PerformanceError pe = new PerformanceError( errorPrefix: Defines.AMP
-                                                      , errorMessage: "Sending of Packets is taking longer than expected, probably a performance issue. " + TYPE + " sending loop is running for {0}ms."
-                                                      );
-            #endif
-            while(true) {
+            while(loop || processPacketQueue.Count > 0) {
                 try {
                     packet = processPacketQueue.Take(); // This will wait non blocking for an item to arrive at the queue
                     #if PERFORMANCE_WARNING
                     pe.Reset();
                     #endif
-                    bytesSent += packet.GetData().Length;
+                    _BytesSent += packet.GetData().Length;
 
                     if(packet == null) continue;
                     SendPacket(packet);
-
-                    #if PERFORMANCE_WARNING
-                    pe.HasPerformanceIssue();
-                    #endif
                 }catch(ThreadAbortException) { 
                     return;
                 }
             }
         }
 
-        internal virtual void SendPacket(NetPacket packet) { }
+        public virtual void SendPacket(NetPacket packet) { }
 
         public virtual void Disconnect() {
             if(!closing) {
@@ -114,34 +125,22 @@ namespace Netamite.Network.Socket {
             }
         }
 
-        public int GetBytesSent() {
-            int i = bytesSent;
-            bytesSent = 0;
-            return i;
-        }
-
-        public int GetBytesReceived() {
-            int i = bytesReceived;
-            bytesReceived = 0;
-            return i;
-        }
-
 
         private Thread processDataThread = null;
-        internal void StartProcessData() {
+        public void StartSending() {
             if(processDataThread != null && processDataThread.IsAlive) return;
             processDataThread = new Thread(ProcessSendQueue);
             processDataThread.Name = "NetSocket Data Send Thread";
             processDataThread.Start();
         }
 
-        internal void StopProcessData() {
+        public void StopSending() {
             if(processDataThread == null) return;
             processDataThread.Abort();
         }
 
         protected Thread awaitDataThread = null;
-        internal void StartAwaitData() {
+        public void StartReceiving() {
             /*
             if(awaitDataThread != null && awaitDataThread.IsAlive) return;
             awaitDataThread = new Thread(AwaitData);
@@ -151,14 +150,14 @@ namespace Netamite.Network.Socket {
             AwaitData();
         }
 
-        internal void StopAwaitData() {
+        public void StopReceiving() {
             if(awaitDataThread == null) return;
             awaitDataThread.Abort();
         }
 
-        internal void StartProcessing() {
-            StartAwaitData();
-            StartProcessData();
+        public void StartProcessing() {
+            StartReceiving();
+            StartSending();
         }
 
         internal void StopProcessing(bool flush = true) {
@@ -171,8 +170,8 @@ namespace Netamite.Network.Socket {
                 Thread.Sleep(100);
             }
 
-            StopAwaitData();
-            StopProcessData();
+            StopReceiving();
+            StopSending();
         }
 
         internal virtual void AwaitData() { }

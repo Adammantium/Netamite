@@ -14,7 +14,10 @@ namespace Netamite.Client.Definition {
         public virtual string TYPE => "NONE";
 
         internal string _STATE = "UNSET";
-        public virtual string STATE { get { return _STATE; } }
+        public virtual string STATE {
+            get { return _STATE; }
+            set { _STATE = value; }
+        }
 
         public bool isConnected = false;
 
@@ -84,6 +87,7 @@ namespace Netamite.Client.Definition {
         public Action onConnect;
         public Action<string> onConnectionError;
         public Action onDisconnect;
+        public Action<string> onWarning;
 
         public NetamiteClient() {
             NetPacket.BuildPacketImplementationCache();
@@ -138,11 +142,11 @@ namespace Netamite.Client.Definition {
         public virtual void SendReliable(NetPacket packet) { reliableSent++; }
         public virtual void SendUnreliable(NetPacket packet) { unreliableSent++; }
 
-        public virtual void OnReliableReceived(NetPacket packet) {
+        internal void OnReliableReceived(NetPacket packet) {
             DataHandler(packet);
             reliableReceive++;    
         }
-        public virtual void OnUnreliableReceived(NetPacket packet) {
+        internal void OnUnreliableReceived(NetPacket packet) {
             DataHandler(packet);
             unreliableReceive++;
         }

@@ -46,8 +46,12 @@ namespace Netamite.Server.Definition {
             get { return _ConnectToken != null && _ConnectToken.Length > 0; }
         }
 
+        private bool _IsRunning;
+        public bool IsRunning { get { return _IsRunning; } }
+
 
         public Action<long> OnStart;
+        public Action<string> OnStartupError;
         public Action<ClientInformation> OnConnect;
         public Action<ClientInformation> OnDisconnect;
         public Action<ClientInformation, NetPacket> OnDataReceived;
@@ -109,18 +113,16 @@ namespace Netamite.Server.Definition {
             }
         }
 
-        /// <summary>
-        /// This function should not be called.
-        /// Please use the function on a super class.
-        /// </summary>
         public virtual void Start() { }
+        public virtual void Stop() { }
 
         private long startDelay = 0;
-        internal void Start(bool start) {
-            if(start) {
+        public void InvokeStartEvent(bool started) {
+            if(started) {
                 startDelay = TimeHelper.Millis;
             } else {
                 long length = TimeHelper.Millis - startDelay;
+                _IsRunning = true;
                 OnStart.Invoke(length);
             }
         }

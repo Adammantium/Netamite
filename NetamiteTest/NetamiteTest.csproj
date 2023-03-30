@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -44,13 +45,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IPTest.cs" />
     <Compile Include="NetamiteTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SteamTest.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NetamiteBase\NetamiteBase.csproj">
-      <Project>{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}</Project>
-      <Name>NetamiteBase</Name>
+    <ProjectReference Include="..\Netamite.Base\Netamite.Base.csproj">
+      <Project>{c770e0e7-28dc-4ffc-9e11-e446c4bf01c1}</Project>
+      <Name>Netamite.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Netamite.Steam\Netamite.Steam.csproj">
+      <Project>{9b9476b6-850a-40f0-8392-005dac655378}</Project>
+      <Name>Netamite.Steam</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

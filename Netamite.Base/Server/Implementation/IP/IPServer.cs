@@ -61,7 +61,7 @@ namespace Netamite.Server.Implementation {
         }
 
         public override void Start() {
-            base.Start(true);
+            base.InvokeStartEvent(false);
             base.Start();
 
             tcpListener = new TcpListener(IPAddress.Any, TcpPort);
@@ -70,7 +70,7 @@ namespace Netamite.Server.Implementation {
 
             udpListener = new UdpClient(UdpPort);
             udpListener.BeginReceive(UDPRequestCallback, null);
-            base.Start(false);
+            base.InvokeStartEvent(true);
         }
 
 

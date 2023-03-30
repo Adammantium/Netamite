@@ -133,7 +133,7 @@ namespace Netamite.Network.Socket {
                 stream.BeginRead(buffer, 0, transmission_bits, ReceiveCallback, null);
         }
 
-        internal override void SendPacket(NetPacket packet) {
+        public override void SendPacket(NetPacket packet) {
             try {
                 if(client != null && stream != null && client.Connected) {
                     byte[] data = packet.GetData(true);

@@ -41,7 +41,7 @@ namespace Netamite.Network.Socket {
             onPacket = null;
         }
 
-        internal override void SendPacket(NetPacket packet) {
+        public override void SendPacket(NetPacket packet) {
             try {
                 if(client != null) {
                     byte[] data = packet.GetData(true);
