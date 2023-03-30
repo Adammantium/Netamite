@@ -1,4 +1,5 @@
 ﻿using Netamite.Helper;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
@@ -7,12 +8,13 @@ using Netamite.Server.Data;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace Netamite.Server.Definition {
     public class NetamiteServer : PacketProcessor {
 
-        public ConcurrentDictionary<ulong, ClientInformation> _clients = new ConcurrentDictionary<ulong, ClientInformation>();
+        public ConcurrentDictionary<int, ClientInformation> _clients = new ConcurrentDictionary<int, ClientInformation>();
         public ClientInformation[] Clients {
             get { return _clients.Values.ToArray(); }
         }
@@ -51,6 +53,7 @@ namespace Netamite.Server.Definition {
 
 
         public Action<long> OnStart;
+        public Action OnClose;
         public Action<string> OnStartupError;
         public Action<ClientInformation> OnConnect;
         public Action<ClientInformation> OnDisconnect;
@@ -85,9 +88,10 @@ namespace Netamite.Server.Definition {
         }
 
         internal static int currentId;
-        internal virtual void ClientJoined(ClientInformation clientInformation) {
+        public static int NextId { get { return Interlocked.Increment(ref currentId); } }
+        public virtual void ClientJoined(ClientInformation clientInformation) {
             if(clientInformation.ClientId <= 0) {
-                clientInformation.ClientId = (ulong) Interlocked.Increment(ref currentId);
+                clientInformation.ClientId = Interlocked.Increment(ref currentId);
             }
             clientInformation.ConnectionTimestamp = DateTime.Now;
             _clients.TryAdd(clientInformation.ClientId, clientInformation);
@@ -99,13 +103,13 @@ namespace Netamite.Server.Definition {
             OnConnect?.Invoke(clientInformation);
         }
 
-        internal virtual void ClientLeft(ClientInformation clientInformation) {
+        public virtual void ClientLeft(ClientInformation clientInformation) {
             _clients.TryRemove(clientInformation.ClientId, out _);
 
             OnDisconnect?.Invoke(clientInformation);
         }
 
-        internal void ProcessPacket(ClientInformation client, NetPacket packet) {
+        public void ProcessPacket(ClientInformation client, NetPacket packet) {
             // Check if the Packet has a built in Implementation
             if(!ProcessPacket(packet, this, client)) {
                 // If there is no built in Implementation, just continue
@@ -114,11 +118,27 @@ namespace Netamite.Server.Definition {
         }
 
         public virtual void Start() { }
-        public virtual void Stop() { }
+        public virtual void Stop() {
+            InvokeStopEvent(false);
+
+            InvokeStopEvent(true);
+        }
+
+        public void InvokeStopEvent(bool stopped) {
+            if(!stopped) {
+                foreach(ClientInformation client in Clients) SendReliableTo(client, new DisconnectPacket(client.ClientId, "Server closed"));
+            } else {
+                _IsRunning = false;
+                if(Netamite.MasterServer == this) {
+                    Netamite.MasterServer = null;
+                }
+                OnClose?.Invoke();
+            }
+        }
 
         private long startDelay = 0;
         public void InvokeStartEvent(bool started) {
-            if(started) {
+            if(!started) {
                 startDelay = TimeHelper.Millis;
             } else {
                 long length = TimeHelper.Millis - startDelay;
@@ -134,7 +154,7 @@ namespace Netamite.Server.Definition {
                 SendUnreliableToAll(p);
         }
 
-        public void SendToAllExcept(NetPacket p, params ulong[] exceptions) {
+        public void SendToAllExcept(NetPacket p, params int[] exceptions) {
             if(p.IsReliable())
                 SendReliableToAllExcept(p, exceptions);
             else
@@ -153,7 +173,7 @@ namespace Netamite.Server.Definition {
             SendReliableToAllExcept(p);
         }
 
-        public void SendReliableToAllExcept(NetPacket p, params ulong[] exceptions) {
+        public void SendReliableToAllExcept(NetPacket p, params int[] exceptions) {
             foreach(ClientInformation client in Clients) {
                 if(exceptions.Contains(client.ClientId)) continue;
 
@@ -169,7 +189,7 @@ namespace Netamite.Server.Definition {
             SendUnreliableToAllExcept(p);
         }
 
-        public void SendUnreliableToAllExcept(NetPacket p, params ulong[] exceptions) {
+        public void SendUnreliableToAllExcept(NetPacket p, params int[] exceptions) {
             foreach(ClientInformation client in Clients) {
                 if(exceptions.Contains(client.ClientId)) continue;
 

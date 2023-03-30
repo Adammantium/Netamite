@@ -37,18 +37,17 @@ namespace Netamite.Client.Implementation {
                 Disconnect();
                 return;
             } else {
-                onConnect += OnConnect;
-                onConnect += LinkUDP;
                 EstablishConnection();
             }
         }
 
-        private void OnConnect() {
+        public override void OnConnect() {
             if(tcp != null) {
                 tcp.onPacket = null;
                 tcp.onPacket = onTcpPacketReceived;
             }
-            onConnect -= OnConnect;
+            LinkUDP();
+            base.OnConnect();
         }
 
         private void LinkUDP() {
@@ -66,8 +65,6 @@ namespace Netamite.Client.Implementation {
             });
             udpLinkThread.Name = "UdpLinker";
             udpLinkThread.Start();
-
-            onConnect -= LinkUDP;
         }
 
         private void onConnectionAbort() {
@@ -87,7 +84,6 @@ namespace Netamite.Client.Implementation {
                 udp.Disconnect();
                 udp = null;
             }
-            onConnect -= OnConnect;
             onConnect -= LinkUDP;
 
             base.Disconnect();

@@ -85,7 +85,8 @@ namespace Netamite.Network.Socket {
             _BytesReceived += packet.GetData().Length;
         }
 
-        internal BlockingCollection<NetPacket> processPacketQueue = new BlockingCollection<NetPacket>();
+        internal BlockingCollection<NetPacket> processPacketQueue = new BlockingCollection<NetPacket>(); 
+        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         public void QueuePacket(NetPacket packet) {
             if(packet == null) return;
             if(closing) return;
@@ -101,16 +102,18 @@ namespace Netamite.Network.Socket {
             NetPacket packet;
             while(loop || processPacketQueue.Count > 0) {
                 try {
-                    packet = processPacketQueue.Take(); // This will wait non blocking for an item to arrive at the queue
-                    #if PERFORMANCE_WARNING
-                    pe.Reset();
-                    #endif
+                    bool has = processPacketQueue.TryTake(out packet, -1, cancellationTokenSource.Token); // This will wait non blocking for an item to arrive at the queue
+                    if(cancellationTokenSource.IsCancellationRequested) return;
+                    if(!has) continue;
+
                     _BytesSent += packet.GetData().Length;
 
                     if(packet == null) continue;
                     SendPacket(packet);
                 }catch(ThreadAbortException) { 
                     return;
+                }catch(ArgumentNullException) {
+                    continue;
                 }
             }
         }
@@ -122,6 +125,8 @@ namespace Netamite.Network.Socket {
                 closing = true;
                 if(onDisconnect != null) onDisconnect.Invoke();
                 StopProcessing();
+                cancellationTokenSource.Cancel();
+                processPacketQueue.Dispose();
             }
         }
 

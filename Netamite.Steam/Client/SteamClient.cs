@@ -1,10 +1,13 @@
 ﻿using Netamite.Client.Definition;
+using Netamite.Client.Implementation;
 using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Steam.Datatype;
 using Netamite.Steam.Integration;
+using Netamite.Steam.Server;
 using Netamite.Steam.Socket;
 using Steamworks;
+using System.Net.Sockets;
 
 namespace Netamite.Steam.Client {
     public class SteamClient : NetamiteClient {
@@ -14,11 +17,15 @@ namespace Netamite.Steam.Client {
 
         public Lobby currentLobby;
 
-        private SteamSocket unreliableSocket;
-        private SteamSocket reliableSocket;
+        private SteamSocket receiveReliableSocket;
+        private SteamSocket receiveUnreliableSocket;
+        private SteamSocket sendReliableSocket;
+        private SteamSocket sendUnreliableSocket;
 
         public SteamClient(ulong lobbyId) : base() {
             this.lobbyId = lobbyId;
+
+            ClientName = SteamIntegration.Username;
         }
 
         public override void Connect(string accessToken = "") {
@@ -34,33 +41,63 @@ namespace Netamite.Steam.Client {
             currentLobby.LobbyId = (CSteamID) lobbyId;
 
             steamClientCallbacks = new SteamClientCallbacks(this);
+
+            lobbyEnteredEvent = 0;
+            SteamMatchmaking.JoinLobby(currentLobby.LobbyId);
         }
 
         public override void Disconnect() {
-            reliableSocket?.Disconnect();
-            reliableSocket = null;
-            unreliableSocket?.Disconnect();
-            unreliableSocket = null;
+            receiveReliableSocket?.Disconnect();
+            receiveReliableSocket = null;
+            receiveUnreliableSocket?.Disconnect();
+            receiveUnreliableSocket = null;
+            sendReliableSocket?.Disconnect();
+            sendReliableSocket = null;
+            sendUnreliableSocket?.Disconnect();
+            sendUnreliableSocket = null;
 
             LeaveLobby();
 
             steamClientCallbacks?.UnregisterCallbacks();
-
-            currentLobby = default(Lobby);
             
             base.Disconnect();
+
+            if(Netamite.MasterServer is SteamServer) {
+                if(currentLobby.OwnerId == SteamIntegration.SteamID) {
+                    SteamServer s = (SteamServer)Netamite.MasterServer;
+                    s.Stop();
+                }
+            }
+
+            currentLobby = default(Lobby);
         }
 
         public override void SendReliable(NetPacket packet) {
-            if(reliableSocket != null) {
-                reliableSocket.QueuePacket(packet);
+            if(Netamite.MasterServer is SteamServer) {
+                if(currentLobby.OwnerId == SteamIntegration.SteamID) {
+                    SteamServer s = (SteamServer) Netamite.MasterServer;
+                    s.ProcessPacket(s._clients[ClientId], packet);
+                    return;
+                }
+            }
+
+            if(sendReliableSocket != null) {
+                sendReliableSocket.QueuePacket(packet);
                 base.SendReliable(packet);
             }
         }
 
         public override void SendUnreliable(NetPacket packet) {
-            if(unreliableSocket != null) {
-                unreliableSocket.QueuePacket(packet);
+            if(Netamite.MasterServer is SteamServer) {
+                if(currentLobby.OwnerId == SteamIntegration.SteamID) {
+                    SteamServer s = (SteamServer)Netamite.MasterServer;
+                    s.ProcessPacket(s._clients[ClientId], packet);
+                    return;
+                }
+            }
+
+            if(sendReliableSocket != null) {
+                sendReliableSocket.QueuePacket(packet);
                 base.SendUnreliable(packet);
             }
         }
@@ -72,11 +109,33 @@ namespace Netamite.Steam.Client {
             }
         }
 
+        private ulong lobbyEnteredEvent = 0; 
         internal void OnLobbyEnter(LobbyEnter_t req) {
             if(req.m_ulSteamIDLobby != (ulong) currentLobby.LobbyId) return;
+            if(lobbyEnteredEvent == req.m_ulSteamIDLobby) return;
 
             SteamIntegration.GetLobbyInfo(req.m_ulSteamIDLobby, ref currentLobby);
+
+            Log.Info(Defines.CLIENT, $"Lobby {lobbyId} entered, finializing connection...");
+
+            OnDataReceived += AwaitingConnectionHandler;
+
+            if(Netamite.MasterServer is SteamServer) {
+                ((SteamServer) Netamite.MasterServer).CheckForNewMembers();
+            }
+            lobbyEnteredEvent = req.m_ulSteamIDLobby;
         }
+        public override void OnConnect() {
+            sendReliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable, ClientId);
+            sendReliableSocket.StopReceiving();
+            sendUnreliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, ClientId);
+            sendUnreliableSocket.StartReceiving();
+
+            Log.Info(Defines.CLIENT, $"Lobby {lobbyId} entered!");
+
+            base.onConnect();
+        }
+
         internal void OnLobbyChatUpdate(LobbyChatUpdate_t req) {
             if(req.m_ulSteamIDLobby != (ulong) currentLobby.LobbyId) return;
 
@@ -88,8 +147,12 @@ namespace Netamite.Steam.Client {
             if(req.m_steamIDRemote == currentLobby.OwnerId) { // Check if the person trying to connect is the host
                 allow = true;
 
-                reliableSocket   = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable,          SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL  );
-                unreliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL);
+                receiveReliableSocket   = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable,          SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL  );
+                receiveReliableSocket.StopSending();
+                receiveReliableSocket.onPacket += OnReliableReceived;
+                receiveUnreliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL);
+                receiveUnreliableSocket.StopSending();
+                receiveUnreliableSocket.onPacket += OnUnreliableReceived;
             }
 
             if(allow) {

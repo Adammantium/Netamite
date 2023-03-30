@@ -1,9 +1,4 @@
 ﻿using Steamworks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Netamite.Steam.Server {
     internal class SteamServerCallbacks {
@@ -39,7 +34,7 @@ namespace Netamite.Steam.Server {
 
             callbackP2PSessionRequest    .Dispose();
             callbackP2PSessionConnectFail.Dispose();
-            callbackLobbyCreate           .Dispose();
+            callbackLobbyCreate          .Dispose();
             callbackLobbyChatUpdate      .Dispose();
 
             registered = false;

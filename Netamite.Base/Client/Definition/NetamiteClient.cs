@@ -1,15 +1,17 @@
 ﻿using Netamite.Helper;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
 using Netamite.Security;
 using System;
+using System.CodeDom;
 using System.Threading;
 
 namespace Netamite.Client.Definition {
     public class NetamiteClient : PacketProcessor {
 
-        internal ulong ClientId = 0;
+        public int ClientId = 0;
 
         public virtual string TYPE => "NONE";
 
@@ -130,6 +132,10 @@ namespace Netamite.Client.Definition {
                 onDisconnect.Invoke();
             }
             _STATE = "CLOSED";
+
+            if(Netamite.MasterClient == this) {
+                Netamite.MasterClient = null;
+            }
         }
 
         public void Send(NetPacket packet) {
@@ -142,13 +148,17 @@ namespace Netamite.Client.Definition {
         public virtual void SendReliable(NetPacket packet) { reliableSent++; }
         public virtual void SendUnreliable(NetPacket packet) { unreliableSent++; }
 
-        internal void OnReliableReceived(NetPacket packet) {
+        public void OnReliableReceived(NetPacket packet) {
             DataHandler(packet);
             reliableReceive++;    
         }
-        internal void OnUnreliableReceived(NetPacket packet) {
+        public void OnUnreliableReceived(NetPacket packet) {
             DataHandler(packet);
             unreliableReceive++;
+        }
+
+        public virtual void OnConnect() {
+            onConnect?.Invoke();
         }
 
         public void EstablishConnection() {
@@ -168,7 +178,7 @@ namespace Netamite.Client.Definition {
                     _STATE = "CONNECTED";
                     isConnected = true;
 
-                    onConnect?.Invoke();
+                    OnConnect();
                 }
             } else if(packet is ErrorPacket) {
                 Disconnect();

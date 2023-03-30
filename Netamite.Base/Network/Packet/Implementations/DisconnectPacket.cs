@@ -6,12 +6,12 @@ using Netamite.Server.Definition;
 namespace Netamite.Network.Packet.Implementations {
     [PacketDefinition((byte) PacketType.DISCONNECT)]
     public class DisconnectPacket : NetPacket {
-        [SyncedVar] public ulong ClientId = 0;
+        [SyncedVar] public int ClientId = 0;
         [SyncedVar] public string Reason = "";
 
         public DisconnectPacket() { }
 
-        public DisconnectPacket(ulong ClientId, string Reason) {
+        public DisconnectPacket(int ClientId, string Reason) {
             this.ClientId = ClientId;
             this.Reason = Reason;
         }

@@ -1,7 +1,9 @@
-﻿using Netamite.Steam.Datatype;
+﻿using Netamite.Logging;
+using Netamite.Steam.Datatype;
 using Netamite.Steam.Exception;
 using Steamworks;
 using System;
+using System.Threading;
 
 namespace Netamite.Steam.Integration {
     public class SteamIntegration {
@@ -19,7 +21,12 @@ namespace Netamite.Steam.Integration {
         private static CSteamID _SteamID;
         public static CSteamID SteamID { get { return _SteamID; } }
 
-        public static bool Initialize(long AppId) {
+        /// <summary>
+        /// If this is set to true, it will allow the user to join an other player via the Steam Overlay
+        /// </summary>
+        public static bool AllowOverlayJoining = true;
+
+        public static bool Initialize(long AppId, bool withCallbackThread = true) {
             _isInitialized = false;
             _isInitialized = SteamAPI.Init();
             if(!_isInitialized) {
@@ -40,6 +47,10 @@ namespace Netamite.Steam.Integration {
                 return false;
             }
 
+            if(withCallbackThread) {
+                RunCallbackThread();
+            }
+
             RegisterCallbacks();
             
             _isInitialized = true;
@@ -50,13 +61,32 @@ namespace Netamite.Steam.Integration {
             return true;
         }
 
+
+        protected static Callback<GameLobbyJoinRequested_t> callbackGameLobbyJoinRequested;
         private static void RegisterCallbacks() {
-            
+            callbackGameLobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
+        }
+
+        private static Thread callbackThread;
+        private static void RunCallbackThread() {
+            callbackThread = new Thread(() => {
+                while(_isInitialized) {
+                    RunCallbacks();
+                    Thread.Sleep(1);
+                }
+            });
+            callbackThread.Start();
         }
 
         public static void RunCallbacks() {
             if(!_isInitialized) return;
             SteamAPI.RunCallbacks();
+        }
+
+        public static void Shutdown() {
+            _isInitialized = false;
+            SteamAPI.Shutdown();
+            callbackThread.Abort();
         }
 
         public static Lobby GetLobbyInfo(ulong lobbyId) {
@@ -85,6 +115,17 @@ namespace Netamite.Steam.Integration {
                     continue;
                 }
             }
+        }
+
+        private static void OnGameLobbyJoinRequested(GameLobbyJoinRequested_t param) {
+            if(!AllowOverlayJoining) return;
+
+            if(Netamite.MasterClient is Client.SteamClient) {
+                ((Client.SteamClient) Netamite.MasterClient).Disconnect();
+            }
+
+            Client.SteamClient steamClient = new Client.SteamClient((ulong) param.m_steamIDLobby);
+            steamClient.Connect();
         }
     }
 }

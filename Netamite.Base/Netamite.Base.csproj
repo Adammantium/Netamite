@@ -82,7 +82,6 @@
     <Compile Include="Server\Data\ClientInformation.cs" />
     <Compile Include="Server\Definition\NetamiteServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Server\Implementation\Steam\SteamServer.cs" />
     <Compile Include="Server\Implementation\IP\IPServer.cs" />
   </ItemGroup>
   <ItemGroup>

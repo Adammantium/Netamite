@@ -1,7 +1,6 @@
 ﻿using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Socket;
-using Netamite.Steam.Integration;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -30,7 +29,7 @@ namespace Netamite.Steam.Socket {
         public override void SendPacket(NetPacket packet) {
             byte[] data = packet.GetData(true);
 
-            byte attempts = 50;
+            byte attempts = 5;
             if(mode == EP2PSend.k_EP2PSendUnreliable || mode == EP2PSend.k_EP2PSendUnreliableNoDelay) attempts = 0;
 
             while(!SteamNetworking.SendP2PPacket(target, data, (uint) data.Length, mode, channel)) {

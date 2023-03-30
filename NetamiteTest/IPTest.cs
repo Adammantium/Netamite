@@ -26,7 +26,10 @@ namespace NetamiteTest {
                 Log.Info(Defines.SERVER, "> " + ci.ClientName + " " + packet);
             };
             server.OnStart += (delay) => {
-                Log.Info($"Started after {delay}ms.");
+                Log.Info(Defines.SERVER, $"Started after {delay}ms.");
+            };
+            server.OnClose += () => {
+                Log.Info(Defines.SERVER, "Server closed");
             };
             server.ConnectToken = "";
             server.Start();
@@ -39,6 +42,8 @@ namespace NetamiteTest {
 
             //then wait for all tasks to complete asyncronously
             Task.WaitAll(tasks.ToArray());
+
+            server.Stop();
         }
 
         private static void Connect(int id, string address, short port) {

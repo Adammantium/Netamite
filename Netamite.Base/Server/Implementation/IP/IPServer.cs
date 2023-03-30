@@ -43,8 +43,8 @@ namespace Netamite.Server.Implementation {
         private static UdpClient udpListener;
 
         internal ConcurrentDictionary<NetSocket, long> waitingForConnectionSockets = new ConcurrentDictionary<NetSocket, long>();
-        internal ConcurrentDictionary<ulong, TcpSocket> tcpConnections = new ConcurrentDictionary<ulong, TcpSocket>();
-        internal ConcurrentDictionary<ulong, UdpSocket> udpConnections = new ConcurrentDictionary<ulong, UdpSocket>();
+        internal ConcurrentDictionary<int, TcpSocket> tcpConnections = new ConcurrentDictionary<int, TcpSocket>();
+        internal ConcurrentDictionary<int, UdpSocket> udpConnections = new ConcurrentDictionary<int, UdpSocket>();
 
         public IPServer() : base() { }
         public IPServer(short port) : base() {
@@ -81,6 +81,7 @@ namespace Netamite.Server.Implementation {
             {
                 tcpClient = tcpListener.EndAcceptTcpClient(result);
             } catch(ObjectDisposedException) { return; } // Happens when closing a already disposed socket, so we can just ignore it
+            if(tcpListener == null) return;
             tcpListener.BeginAcceptTcpClient(TCPRequestCallback, null);
 
             TcpSocket socket = new TcpSocket(tcpClient);
@@ -100,6 +101,7 @@ namespace Netamite.Server.Implementation {
                 try {
                     data = udpListener.EndReceive(result, ref clientEndPoint);
                 } catch(Exception) { }
+                if(udpListener == null) return;
                 udpListener.BeginReceive(UDPRequestCallback, null);
 
                 if(data == null || data.Length <= 1) return;
@@ -107,7 +109,7 @@ namespace Netamite.Server.Implementation {
                 // Check if its a welcome package and if the user is not linked up
                 using(NetPacket packet = NetPacket.ReadPacket(data, true)) {
                     if(packet is WelcomePacket) {
-                        ulong clientId = ((WelcomePacket)packet).ClientId;
+                        int clientId = ((WelcomePacket) packet).ClientId;
 
                         // If no udp is connected, then link up
                         if(!udpConnections.ContainsKey(clientId) && _clients.ContainsKey(clientId)) {
@@ -125,7 +127,7 @@ namespace Netamite.Server.Implementation {
 
                 // Determine client id by EndPoint
                 bool found = false;
-                foreach(KeyValuePair<ulong, UdpSocket> entry in udpConnections) {
+                foreach(KeyValuePair<int, UdpSocket> entry in udpConnections) {
                     if(IPEndPoint.Equals(entry.Value.endPoint, clientEndPoint)) {
                         NetPacket netPacket = NetPacket.ReadPacket(data, true);
                         if(!(netPacket is WelcomePacket)) {
@@ -154,7 +156,7 @@ namespace Netamite.Server.Implementation {
                     ClientInformation clientInformation = new ClientInformation();
                     clientInformation.ClientName = ecp.name;
 
-                    clientInformation.ClientId = (ulong)Interlocked.Increment(ref currentId);
+                    clientInformation.ClientId = NextId;
                     tcpConnections.TryAdd(clientInformation.ClientId, socket);
 
                     socket.onPacket = null;
@@ -172,12 +174,14 @@ namespace Netamite.Server.Implementation {
             }
         }
 
-        internal override void ClientLeft(ClientInformation client) {
+        public override void ClientLeft(ClientInformation client) {
             if(tcpConnections.ContainsKey(client.ClientId)) {
                 SendReliableTo(client, new DisconnectPacket(client.ClientId, "Connection closed"));
+                tcpConnections[client.ClientId].Disconnect();
                 tcpConnections.TryRemove(client.ClientId, out _);
             }
             if(udpConnections.ContainsKey(client.ClientId)) {
+                udpConnections[client.ClientId].Disconnect();
                 udpConnections.TryRemove(client.ClientId, out _);
             }
             SendReliableToAllExcept(new DisconnectPacket(client.ClientId, "Connection closed"), client.ClientId);
@@ -197,6 +201,24 @@ namespace Netamite.Server.Implementation {
             if(udpConnections.ContainsKey(client.ClientId)) {
                 tcpConnections[client.ClientId].SendPacket(p);
             }
+        }
+
+        public override void Stop() {
+            InvokeStopEvent(false);
+
+            tcpListener?.Stop();
+            tcpListener = null;
+            udpListener?.Close();
+            udpListener = null;
+
+            foreach(TcpSocket tcpSocket in tcpConnections.Values) {
+                tcpSocket?.Disconnect();
+            }
+            foreach(UdpSocket udpSocket in udpConnections.Values) {
+                udpSocket?.Disconnect();
+            }
+
+            InvokeStopEvent(true);
         }
     }
 }
