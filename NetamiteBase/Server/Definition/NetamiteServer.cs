@@ -6,7 +6,6 @@ using Netamite.Security;
 using Netamite.Server.Data;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
@@ -57,6 +56,9 @@ namespace Netamite.Server.Definition {
 
         public NetamiteServer() {
             NetPacket.BuildPacketImplementationCache();
+            if(Netamite.MasterServer == null) {
+                Netamite.MasterServer = this;
+            }
         }
 
         public NetamiteServer(int maxClients) : base() {

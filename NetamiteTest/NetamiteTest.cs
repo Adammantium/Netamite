@@ -1,18 +1,17 @@
-﻿using Netamite.Client.Definition;
+﻿using Netamite;
+using Netamite.Client.Definition;
 using Netamite.Client.Implementation;
-using Netamite.Helper;
 using Netamite.Logging;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Server.Definition;
 using Netamite.Server.Implementation;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Netamite {
-    public class Netamite {
+namespace NetamiteTest {
+    public class NetamiteTest {
         public static void Main(string[] args) {
             Console.WriteLine("  _   _      _                  _ _       \r\n | \\ | |    | |                (_) |      \r\n |  \\| | ___| |_ __ _ _ __ ___  _| |_ ___ \r\n | . ` |/ _ \\ __/ _` | '_ ` _ \\| | __/ _ \\\r\n | |\\  |  __/ || (_| | | | | | | | ||  __/\r\n |_| \\_|\\___|\\__\\__,_|_| |_| |_|_|\\__\\___|\r\n                                          \r\n                                          ");
 

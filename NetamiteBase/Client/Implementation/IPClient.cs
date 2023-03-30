@@ -8,7 +8,7 @@ using System.Net;
 using System.Threading;
 
 namespace Netamite.Client.Implementation {
-    internal class IPClient : NetamiteClient {
+    public class IPClient : NetamiteClient {
 
         private string ip;
         private int port;

@@ -3,7 +3,6 @@ using Netamite.Network.Packet;
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Runtime.Remoting.Messaging;
 using System.Threading;
 
 namespace Netamite.Network.Socket {

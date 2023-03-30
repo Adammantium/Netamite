@@ -1,5 +1,4 @@
 ﻿using Netamite.Helper;
-using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
@@ -88,6 +87,9 @@ namespace Netamite.Client.Definition {
 
         public NetamiteClient() {
             NetPacket.BuildPacketImplementationCache();
+            if(Netamite.MasterClient == null) {
+                Netamite.MasterClient = this;
+            }
         }
 
         internal ulong GetBytesSent() {

@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33502.453
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite", "Netamite.csproj", "{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetamiteBase", "NetamiteBase\NetamiteBase.csproj", "{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetamiteTest", "NetamiteTest\NetamiteTest.csproj", "{4E4E5B7F-A405-4BAE-8352-DF4A35BC81AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Steam", "Netamite.Steam\Netamite.Steam.csproj", "{9B9476B6-850A-40F0-8392-005DAC655378}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E4E5B7F-A405-4BAE-8352-DF4A35BC81AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E4E5B7F-A405-4BAE-8352-DF4A35BC81AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E4E5B7F-A405-4BAE-8352-DF4A35BC81AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E4E5B7F-A405-4BAE-8352-DF4A35BC81AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B9476B6-850A-40F0-8392-005DAC655378}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B9476B6-850A-40F0-8392-005DAC655378}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B9476B6-850A-40F0-8392-005DAC655378}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B9476B6-850A-40F0-8392-005DAC655378}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
