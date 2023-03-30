@@ -74,6 +74,8 @@ namespace Netamite.Network.Packet {
 
             //Log.Debug("DEBUG", myType);
 
+            BeforeProcessing();
+
             for(int i = 0; i < myMembers.Length; i++) {
                 MemberInfo memberInfo = myMembers[i];
 
@@ -187,11 +189,27 @@ namespace Netamite.Network.Packet {
             return true;
         }
 
-        public void Dispose() {
-            
-        }
-    
+        public void Dispose() { }
+        
+        /// <summary>
+        /// This function will be called once the packet is ready for sending and will be converted to a binary stream.
+        /// You can use this function to add timestamps or do some last calculations
+        /// </summary>
+        public virtual void BeforeProcessing() { }
+
+        /// <summary>
+        /// This will be called when the packet is received on the Client.
+        /// </summary>
+        /// <param name="client">Client Instance that is processing the packet</param>
+        /// <returns>TRUE - Ends the processing and is not calling any ReceivedData-Events / FALSE - Will still call the ReceiveData-Event</returns>
         public virtual bool ProcessClient(NetamiteClient client) { return false; }
+
+        /// <summary>
+        /// This will be called when the packet is received on the Server.
+        /// </summary>
+        /// <param name="server">Server Instance that is processing the  packet</param>
+        /// <param name="client">Client Information that sent the Packet</param>
+        /// <returns></returns>
         public virtual bool ProcessServer(NetamiteServer server, ClientInformation client) { return false; }
     }
 }

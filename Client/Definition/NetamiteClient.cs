@@ -1,4 +1,5 @@
-﻿using Netamite.Logging;
+﻿using Netamite.Helper;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
@@ -49,13 +50,34 @@ namespace Netamite.Client.Definition {
         internal long lastServerTimestamp = 0;
         internal long serverTimestampTime = 0;
         internal long serverTimestampOffset = 0;
+        /// <summary>
+        /// Offset from the local time to the server in miliseconds.
+        /// If the server has a missmatching time that mismatching with
+        /// the client time, this will fix it.
+        /// </summary>
         public long ServerTimeOffset {
             get { return serverTimestampOffset; }
         }
 
+        /// <summary>
+        /// Last ping messurement
+        /// </summary>
         internal long _Ping;
         public long Ping {
             get { return _Ping; } 
+        }
+
+        /// <summary>
+        /// This will return the fixed timestamp, this will take the server time
+        /// and ping in account.
+        /// If you want to have a central timestamp for all clients to use for clientside
+        /// prediction, you should use this.
+        /// It's a UNIX Timestamp.
+        /// </summary>
+        public long FixedTimestamp {
+            get {
+                return TimeHelper.Millis + ServerTimeOffset;
+            }
         }
 
         public Action<NetPacket> OnDataReceived;

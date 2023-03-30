@@ -45,7 +45,7 @@ namespace Netamite {
         }
 
         private static void Connect(int id, string address, short port) {
-            //Thread.Sleep(id);
+            Thread.Sleep(id * 200);
             NetamiteClient client = new IPClient(address, port);
             client.ClientName = "Client " + id;
 
