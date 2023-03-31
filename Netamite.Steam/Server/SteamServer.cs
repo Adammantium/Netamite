@@ -80,12 +80,12 @@ namespace Netamite.Steam.Server {
 
                     SteamSocket reliableSocket = new SteamSocket(member.SteamId, EP2PSend.k_EP2PSendReliable, clientInformation.ClientId);
                     reliableSocket.StopSending(); // Only needed for receiving, sending will be on channel defined in SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL
-                    reliableSocket.onPacket = (p) => {
+                    reliableSocket.onPacketWithId = (id, p) => {
                         ProcessPacket(clientInformation, p);
                     };
                     SteamSocket unreliableSocket = new SteamSocket(member.SteamId, EP2PSend.k_EP2PSendUnreliableNoDelay, clientInformation.ClientId);
                     unreliableSocket.StopSending(); // Only needed for receiving, sending will be on channel defined in SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL
-                    unreliableSocket.onPacket = (p) => {
+                    unreliableSocket.onPacketWithId = (id, p) => {
                         ProcessPacket(clientInformation, p);
                     };
 

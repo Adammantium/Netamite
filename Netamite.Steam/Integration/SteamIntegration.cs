@@ -129,8 +129,6 @@ namespace Netamite.Steam.Integration {
             Client.SteamClient steamClient = new Client.SteamClient((ulong) param.m_steamIDLobby);
 
             OnOverlayJoin?.Invoke(steamClient);
-
-            steamClient.Connect();
         }
     }
 }

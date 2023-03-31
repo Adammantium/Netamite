@@ -63,6 +63,7 @@
     <Compile Include="Client\Definition\NetamiteClient.cs" />
     <Compile Include="Network\BinaryNetStream.cs" />
     <Compile Include="Network\Helper\NetworkUtil.cs" />
+    <Compile Include="Network\Packet\Implementations\MessagePacket.cs" />
     <Compile Include="Network\Packet\Implementations\DisconnectPacket.cs" />
     <Compile Include="Network\Packet\Implementations\ErrorPacket.cs" />
     <Compile Include="Network\Packet\Implementations\EstablishConnectionPacket.cs" />

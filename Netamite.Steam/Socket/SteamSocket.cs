@@ -5,6 +5,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Timers;
 
 namespace Netamite.Steam.Socket {
     public class SteamSocket : NetSocket {
@@ -39,13 +40,15 @@ namespace Netamite.Steam.Socket {
             }
         }
 
-        public void RunCallbacks() {
-            ReadSocket();
-            ProcessSendQueue(false);
+        public override void AwaitData() {
+            if(awaitDataThread != null && awaitDataThread.IsAlive) return;
+            awaitDataThread = new Thread(ReadSocket);
+            awaitDataThread.Name = "SteamSocket Data Read Thread";
+            awaitDataThread.Start();
         }
 
         private void ReadSocket() {
-            if(!closing) {
+            while(!closing) {
                 uint size;
                 byte[] data;
                 CSteamID sender;
@@ -59,16 +62,8 @@ namespace Netamite.Steam.Socket {
                     BytesReceive += (int) size;
 
                     HandleData((ulong)sender, data);
-                    //try {
-                    //    NetPacket packet = NetPacket.ReadPacket(data);
-                    //
-                    //    if(packet == null) continue;
-                    //
-                    //    onPacketWithId?.Invoke((ulong) sender, packet);
-                    //}catch(Exception ex) {
-                    //    Log.Err(ex);
-                    //}
                 }
+                Thread.Sleep(1);
             }
         }
 

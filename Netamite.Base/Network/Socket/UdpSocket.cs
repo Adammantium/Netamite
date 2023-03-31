@@ -52,7 +52,7 @@ namespace Netamite.Network.Socket {
             }
         }
 
-        internal override void AwaitData() {
+        public override void AwaitData() {
             client.BeginReceive(new AsyncCallback(ReceiveCallback), null);
         }
 

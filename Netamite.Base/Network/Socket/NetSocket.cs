@@ -179,6 +179,6 @@ namespace Netamite.Network.Socket {
             StopSending();
         }
 
-        internal virtual void AwaitData() { }
+        public virtual void AwaitData() { }
     }
 }

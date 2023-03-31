@@ -105,7 +105,7 @@ namespace Netamite.Network.Socket {
             StartProcessing();
         }
 
-        internal override void AwaitData() {
+        public override void AwaitData() {
             stream.BeginRead(buffer, 0, transmission_bits, ReceiveCallback, null);
         }
 

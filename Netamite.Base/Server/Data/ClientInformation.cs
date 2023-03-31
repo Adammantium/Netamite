@@ -1,4 +1,5 @@
-﻿using Netamite.Network.Packet;
+﻿using Netamite.Helper;
+using Netamite.Network.Packet;
 using System;
 
 namespace Netamite.Server.Data {
@@ -11,5 +12,9 @@ namespace Netamite.Server.Data {
         internal long lastTimeSyncStamp;
 
         internal long lastPacketTimestamp;
+
+        public ClientInformation() {
+            lastPacketTimestamp = TimeHelper.Millis;
+        }
     }
 }

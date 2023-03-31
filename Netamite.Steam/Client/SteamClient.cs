@@ -8,6 +8,7 @@ using Netamite.Steam.Integration;
 using Netamite.Steam.Server;
 using Netamite.Steam.Socket;
 using Steamworks;
+using System;
 using System.Net.Sockets;
 
 namespace Netamite.Steam.Client {
@@ -117,9 +118,7 @@ namespace Netamite.Steam.Client {
 
             SteamIntegration.GetLobbyInfo(req.m_ulSteamIDLobby, ref currentLobby);
 
-            Log.Info(Defines.CLIENT, $"Lobby {lobbyId} entered, finializing connection...");
-
-            OnDataReceived += AwaitingConnectionHandler;
+            Log.Info(Defines.CLIENT, $"Lobby {lobbyId} entered, finalizing connection...");
 
             if(Netamite.MasterServer is SteamServer) {
                 ((SteamServer) Netamite.MasterServer).CheckForNewMembers();
@@ -150,16 +149,31 @@ namespace Netamite.Steam.Client {
 
                 receiveReliableSocket   = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable,          SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL  );
                 receiveReliableSocket.StopSending();
-                receiveReliableSocket.onPacket += OnReliableReceived;
+                receiveReliableSocket.onPacketWithId += OnReliableReceivedWithId;
                 receiveUnreliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL);
                 receiveUnreliableSocket.StopSending();
-                receiveUnreliableSocket.onPacket += OnUnreliableReceived;
+                receiveUnreliableSocket.onPacketWithId += OnUnreliableReceivedWithId;
             }
 
             if(allow) {
                 SteamNetworking.AcceptP2PSessionWithUser(req.m_steamIDRemote);
             } else {
                 onWarning?.Invoke("Connection denied from unknown SteamId " + req.m_steamIDRemote);
+            }
+        }
+
+        private void OnReliableReceivedWithId(ulong steamId, NetPacket p) {
+            if(isConnected) {
+                OnReliableReceived(p);
+            } else {
+                AwaitingConnectionHandler(p);
+            }
+        }
+        private void OnUnreliableReceivedWithId(ulong steamId, NetPacket p) {
+            if(isConnected) {
+                OnUnreliableReceived(p);
+            } else {
+                AwaitingConnectionHandler(p);
             }
         }
 

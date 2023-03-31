@@ -23,7 +23,7 @@ namespace NetamiteTest {
                 Log.Info(Defines.SERVER, "- " + ci.ClientName + " " + reason);
             };
             server.OnDataReceived += (ci, packet) => {
-                Log.Info(Defines.SERVER, "> " + ci.ClientName + " " + packet);
+                Log.Info(Defines.SERVER, "REC " + ci.ClientName + " " + packet);
             };
             server.OnStart += (delay) => {
                 Log.Info(Defines.SERVER, $"Started after {delay}ms.");
@@ -67,12 +67,12 @@ namespace NetamiteTest {
 
             Thread.Sleep(1000);
             if(client.isConnected) {
-                Log.Debug(Defines.CLIENT + " " + id, "SEND TCP");
-                client.SendReliable(new PingPacket());
+                Log.Debug(Defines.CLIENT + " " + id, "UNRELIABLE");
+                client.SendReliable(new MessagePacket("TCP WHOOP"));
 
                 Thread.Sleep(500);
-                Log.Debug(Defines.CLIENT + " " + id, "SEND UDP");
-                client.SendUnreliable(new PingPacket());
+                Log.Debug(Defines.CLIENT + " " + id, "RELIABLE");
+                client.SendUnreliable(new MessagePacket("UDP WHOOP"));
                 Thread.Sleep(500);
 
                 client.Disconnect();

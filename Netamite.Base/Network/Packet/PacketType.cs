@@ -8,5 +8,6 @@
         WELCOME                 = 4,
         PING                    = 5,
         TIME_SYNCHRONIZATION    = 6,
+        MESSAGE                 = 7,
     }
 }

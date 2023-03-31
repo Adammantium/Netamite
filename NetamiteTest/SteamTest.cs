@@ -12,6 +12,7 @@ using System.Threading;
 using Netamite.Steam.Client;
 using Netamite.Steam.Server;
 using Netamite.Steam.Datatype;
+using System;
 
 namespace NetamiteTest {
     internal class SteamTest {
@@ -19,29 +20,39 @@ namespace NetamiteTest {
         public static void DoTest() {
             SteamIntegration.Initialize(480);
 
-            NetamiteServer server = new SteamServer(10, true);
-            server.OnConnect += (ci) => {
-                Log.Info(Defines.SERVER, "+ " + ci.ClientName);
+            bool joined = false;
+            SteamIntegration.OnOverlayJoin += (client) => {
+                joined = true;
+                Connect(1, client);
             };
-            server.OnDisconnect += (ci, reason) => {
-                Log.Info(Defines.SERVER, "- " + ci.ClientName + " " + reason);
-            };
-            server.OnDataReceived += (ci, packet) => {
-                Log.Info(Defines.SERVER, "> " + ci.ClientName + " " + packet);
-            };
-            server.OnStart += (delay) => {
-                Log.Info(Defines.SERVER, $"Started after {delay}ms.");
-            };
-            server.OnClose += () => {
-                Log.Info(Defines.SERVER, "Server closed");
-                SteamIntegration.Shutdown();
-            };
-            server.ConnectToken = "";
-            server.Start();
+            Console.WriteLine("Waiting for joining via the steam overlay. Press ENTER to host.");
+            Console.ReadLine();
 
-            Thread.Sleep(2500);
+            if(!joined) {
+                NetamiteServer server = new SteamServer(10, true);
+                server.OnConnect += (ci) => {
+                    Log.Info(Defines.SERVER, "+ " + ci.ClientName);
+                };
+                server.OnDisconnect += (ci, reason) => {
+                    Log.Info(Defines.SERVER, "- " + ci.ClientName + " " + reason);
+                };
+                server.OnDataReceived += (ci, packet) => {
+                    Log.Info(Defines.SERVER, "REC " + ci.ClientName + " " + packet);
+                };
+                server.OnStart += (delay) => {
+                    Log.Info(Defines.SERVER, $"Started after {delay}ms.");
+                };
+                server.OnClose += () => {
+                    Log.Info(Defines.SERVER, "Server closed");
+                    SteamIntegration.Shutdown();
+                };
+                server.ConnectToken = "";
+                server.Start();
 
-            BeginConnecting((ulong)((SteamServer)server).currentLobby.LobbyId);
+                Thread.Sleep(2500);
+
+                BeginConnecting((ulong)((SteamServer)server).currentLobby.LobbyId);
+            }
 
             SteamIntegration.Shutdown();
         }
@@ -61,7 +72,10 @@ namespace NetamiteTest {
             Thread.Sleep(id * 200);
             NetamiteClient client = new SteamClient(lobbyId);;
             //client.ClientName = "Client " + id;
+            Connect(id, client);
+        }
 
+        private static void Connect(int id, NetamiteClient client) {
             client.onConnect += () => {
                 Log.Info(Defines.CLIENT + " " + id, "CONNECTED");
             };
@@ -78,13 +92,15 @@ namespace NetamiteTest {
 
             Thread.Sleep(2500);
             if(client.isConnected) {
-                Log.Debug(Defines.CLIENT + " " + id, "SEND TCP");
-                client.SendReliable(new PingPacket());
+                Log.Debug(Defines.CLIENT + " " + id, "UNRELIABLE");
+                client.SendReliable(new MessagePacket("UNRELIABLE"));
 
                 Thread.Sleep(500);
-                Log.Debug(Defines.CLIENT + " " + id, "SEND UDP");
-                client.SendUnreliable(new PingPacket());
-                Thread.Sleep(500);
+                Log.Debug(Defines.CLIENT + " " + id, "RELIABLE");
+                client.SendUnreliable(new MessagePacket("RELIABLE"));
+
+                Console.WriteLine("Press ENTER to stop.");
+                Console.ReadLine();
 
                 client.Disconnect();
                 Thread.Sleep(1000);
