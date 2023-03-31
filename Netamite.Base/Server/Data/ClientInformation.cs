@@ -10,8 +10,6 @@ namespace Netamite.Server.Data {
 
         internal long lastTimeSyncStamp;
 
-        public Action<NetPacket> sendReliablePacket;
-        public Action<NetPacket> sendUnreliablePacket;
-
+        internal long lastPacketTimestamp;
     }
 }

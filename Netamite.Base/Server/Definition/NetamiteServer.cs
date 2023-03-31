@@ -1,4 +1,6 @@
-﻿using Netamite.Helper;
+﻿using Netamite.Client.Implementation;
+using Netamite.Datatype;
+using Netamite.Helper;
 using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
@@ -7,6 +9,7 @@ using Netamite.Security;
 using Netamite.Server.Data;
 using System;
 using System.Collections.Concurrent;
+using System.Drawing;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
@@ -51,12 +54,21 @@ namespace Netamite.Server.Definition {
         private bool _IsRunning;
         public bool IsRunning { get { return _IsRunning; } }
 
+        /// <summary>
+        /// Delay after what the client times out and has probably lost connection.
+        /// Values equal or lower than 0 will disable the timeout checks.
+        /// </summary>
+        private long _ClientTimeoutDelay = 30000;
+        public long ClientTimeoutDelay {
+            get { return _ClientTimeoutDelay; }
+            set {  _ClientTimeoutDelay = value; }
+        }
 
         public Action<long> OnStart;
         public Action OnClose;
         public Action<string> OnStartupError;
         public Action<ClientInformation> OnConnect;
-        public Action<ClientInformation> OnDisconnect;
+        public Action<ClientInformation, string> OnDisconnect;
         public Action<ClientInformation, NetPacket> OnDataReceived;
         public Action<ClientInformation, NetPacket> OnDataSent;
 
@@ -103,13 +115,22 @@ namespace Netamite.Server.Definition {
             OnConnect?.Invoke(clientInformation);
         }
 
-        public virtual void ClientLeft(ClientInformation clientInformation) {
-            _clients.TryRemove(clientInformation.ClientId, out _);
+        public virtual void ClientLeft(ClientInformation client, string reason = DisconnectReason.CONNECTION_CLOSED) {
+            if(_clients.ContainsKey(client.ClientId)) {
+                SendReliableTo(client, new DisconnectPacket(client.ClientId, reason));
+                SendReliableToAllExcept(new DisconnectPacket(client.ClientId, reason), client.ClientId);
+                
+                _clients.TryRemove(client.ClientId, out _);
 
-            OnDisconnect?.Invoke(clientInformation);
+                OnDisconnect?.Invoke(client, reason);
+            }
         }
 
         public void ProcessPacket(ClientInformation client, NetPacket packet) {
+            if(!_clients.ContainsKey(client.ClientId)) return;
+
+            client.lastPacketTimestamp = TimeHelper.Millis; // Remember when we received the last packet to not timeout the player
+
             // Check if the Packet has a built in Implementation
             if(!ProcessPacket(packet, this, client)) {
                 // If there is no built in Implementation, just continue
@@ -126,12 +147,13 @@ namespace Netamite.Server.Definition {
 
         public void InvokeStopEvent(bool stopped) {
             if(!stopped) {
-                foreach(ClientInformation client in Clients) SendReliableTo(client, new DisconnectPacket(client.ClientId, "Server closed"));
+                foreach(ClientInformation client in Clients) SendReliableTo(client, new DisconnectPacket(client.ClientId, DisconnectReason.SERVER_CLOSED));
             } else {
                 _IsRunning = false;
                 if(Netamite.MasterServer == this) {
                     Netamite.MasterServer = null;
                 }
+                StopCheckingThreads();
                 OnClose?.Invoke();
             }
         }
@@ -142,6 +164,7 @@ namespace Netamite.Server.Definition {
                 startDelay = TimeHelper.Millis;
             } else {
                 long length = TimeHelper.Millis - startDelay;
+                StartCheckingThreads();
                 _IsRunning = true;
                 OnStart.Invoke(length);
             }
@@ -218,6 +241,46 @@ namespace Netamite.Server.Definition {
             client.lastTimeSyncStamp = timeSynchronizationPacket.server_timestamp;
 
             SendReliableTo(client, timeSynchronizationPacket);
+        }
+
+        private Thread timeoutCheckerThread = null;
+        private Thread timeSyncThread = null;
+        private CancellationTokenSource additionalServerThreadsCancellation = new CancellationTokenSource();
+        private void StartCheckingThreads() {
+            if(ClientTimeoutDelay > 0) {
+                timeoutCheckerThread = new Thread(TimeoutCheckThread) { IsBackground = true };
+                timeoutCheckerThread.Start();
+            }
+            timeSyncThread = new Thread(TimeSyncThread) { IsBackground = true };
+            timeSyncThread.Start();
+        }
+        private void StopCheckingThreads() {
+            additionalServerThreadsCancellation.Cancel();
+            if(timeoutCheckerThread != null) {
+                timeoutCheckerThread.Abort();
+                timeoutCheckerThread = null;
+            }
+            if(timeSyncThread != null) {
+                timeSyncThread.Abort();
+                timeSyncThread = null;
+            }
+        }
+        private void TimeoutCheckThread() {
+            while(!additionalServerThreadsCancellation.IsCancellationRequested) {
+                long timestamp = TimeHelper.Millis;
+                foreach(ClientInformation clientInformation in _clients.Values) {
+                    if(timestamp - clientInformation.lastPacketTimestamp > ClientTimeoutDelay) {
+                        ClientLeft(clientInformation, DisconnectReason.CONNECTION_TIMEOUT);
+                    }
+                }
+                Thread.Sleep(1000);
+            }
+        }
+        private void TimeSyncThread() {
+            while(!additionalServerThreadsCancellation.IsCancellationRequested) {
+                InitializeTimeSync();
+                Thread.Sleep(60000);
+            }
         }
     }
 }

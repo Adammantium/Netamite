@@ -134,7 +134,7 @@ namespace Netamite.Network.Socket {
         private Thread processDataThread = null;
         public void StartSending() {
             if(processDataThread != null && processDataThread.IsAlive) return;
-            processDataThread = new Thread(ProcessSendQueue);
+            processDataThread = new Thread(ProcessSendQueue) { IsBackground = true };
             processDataThread.Name = "NetSocket Data Send Thread";
             processDataThread.Start();
         }

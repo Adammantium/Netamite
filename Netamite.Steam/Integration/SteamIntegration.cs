@@ -26,6 +26,8 @@ namespace Netamite.Steam.Integration {
         /// </summary>
         public static bool AllowOverlayJoining = true;
 
+        public static Action<Client.SteamClient> OnOverlayJoin;
+
         public static bool Initialize(long AppId, bool withCallbackThread = true) {
             _isInitialized = false;
             _isInitialized = SteamAPI.Init();
@@ -74,7 +76,7 @@ namespace Netamite.Steam.Integration {
                     RunCallbacks();
                     Thread.Sleep(1);
                 }
-            });
+            }) { IsBackground = true };
             callbackThread.Start();
         }
 
@@ -125,6 +127,9 @@ namespace Netamite.Steam.Integration {
             }
 
             Client.SteamClient steamClient = new Client.SteamClient((ulong) param.m_steamIDLobby);
+
+            OnOverlayJoin?.Invoke(steamClient);
+
             steamClient.Connect();
         }
     }

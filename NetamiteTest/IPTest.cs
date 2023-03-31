@@ -19,8 +19,8 @@ namespace NetamiteTest {
             server.OnConnect += (ci) => {
                 Log.Info(Defines.SERVER, "+ " + ci.ClientName);
             };
-            server.OnDisconnect += (ci) => {
-                Log.Info(Defines.SERVER, "- " + ci.ClientName);
+            server.OnDisconnect += (ci, reason) => {
+                Log.Info(Defines.SERVER, "- " + ci.ClientName + " " + reason);
             };
             server.OnDataReceived += (ci, packet) => {
                 Log.Info(Defines.SERVER, "> " + ci.ClientName + " " + packet);
@@ -57,8 +57,8 @@ namespace NetamiteTest {
             client.onConnectionError += (message) => {
                 Log.Info(Defines.CLIENT + " " + id, "CONNECTION REFUSED: " + message);
             };
-            client.onDisconnect += () => {
-                Log.Info(Defines.CLIENT + " " + id, "DISCONNECTED");
+            client.onDisconnect += (reason) => {
+                Log.Info(Defines.CLIENT + " " + id, "Disconnect: " + reason);
             };
             client.OnDataReceived += (packet) => {
                 Log.Info(Defines.CLIENT + " " + id, "> " + packet);

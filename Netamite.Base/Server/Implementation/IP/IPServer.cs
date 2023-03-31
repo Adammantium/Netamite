@@ -1,4 +1,5 @@
-﻿using Netamite.Helper;
+﻿using Netamite.Datatype;
+using Netamite.Helper;
 using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
@@ -174,9 +175,10 @@ namespace Netamite.Server.Implementation {
             }
         }
 
-        public override void ClientLeft(ClientInformation client) {
+        public override void ClientLeft(ClientInformation client, string reason = DisconnectReason.CONNECTION_CLOSED) {
+            base.ClientLeft(client, reason);
+
             if(tcpConnections.ContainsKey(client.ClientId)) {
-                SendReliableTo(client, new DisconnectPacket(client.ClientId, "Connection closed"));
                 tcpConnections[client.ClientId].Disconnect();
                 tcpConnections.TryRemove(client.ClientId, out _);
             }
@@ -184,9 +186,6 @@ namespace Netamite.Server.Implementation {
                 udpConnections[client.ClientId].Disconnect();
                 udpConnections.TryRemove(client.ClientId, out _);
             }
-            SendReliableToAllExcept(new DisconnectPacket(client.ClientId, "Connection closed"), client.ClientId);
-
-            base.ClientLeft(client);
         }
 
         // Reliable

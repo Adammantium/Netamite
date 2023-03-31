@@ -1,5 +1,6 @@
 ﻿using Netamite.Client.Definition;
 using Netamite.Client.Implementation;
+using Netamite.Datatype;
 using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Steam.Datatype;
@@ -46,7 +47,9 @@ namespace Netamite.Steam.Client {
             SteamMatchmaking.JoinLobby(currentLobby.LobbyId);
         }
 
-        public override void Disconnect() {
+        public override void Disconnect(string reason = DisconnectReason.CONNECTION_CLOSED) {
+            base.Disconnect(reason);
+
             receiveReliableSocket?.Disconnect();
             receiveReliableSocket = null;
             receiveUnreliableSocket?.Disconnect();
@@ -59,8 +62,6 @@ namespace Netamite.Steam.Client {
             LeaveLobby();
 
             steamClientCallbacks?.UnregisterCallbacks();
-            
-            base.Disconnect();
 
             if(Netamite.MasterServer is SteamServer) {
                 if(currentLobby.OwnerId == SteamIntegration.SteamID) {

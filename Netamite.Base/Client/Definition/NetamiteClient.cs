@@ -1,11 +1,14 @@
-﻿using Netamite.Helper;
+﻿using Netamite.Datatype;
+using Netamite.Helper;
 using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
 using Netamite.Security;
+using Netamite.Server.Data;
 using System;
 using System.CodeDom;
+using System.Drawing;
 using System.Threading;
 
 namespace Netamite.Client.Definition {
@@ -44,6 +47,16 @@ namespace Netamite.Client.Definition {
         }
         public bool HasConnectToken {
             get { return _ConnectToken != null && _ConnectToken.Length > 0; }
+        }
+
+        /// <summary>
+        /// How often a ping packet will be sent to the server.
+        /// Values equal or lower than 0 will disable the automatic pings and can cause timeouts.
+        /// </summary>
+        private int _PingDelay = 1000;
+        public int PingDelay {
+            get { return _PingDelay; }
+            set { _PingDelay = value; }
         }
 
         internal ulong unreliableSent = 0;
@@ -88,7 +101,7 @@ namespace Netamite.Client.Definition {
 
         public Action onConnect;
         public Action<string> onConnectionError;
-        public Action onDisconnect;
+        public Action<string> onDisconnect;
         public Action<string> onWarning;
 
         public NetamiteClient() {
@@ -125,12 +138,17 @@ namespace Netamite.Client.Definition {
             ConnectToken = accessToken;
         }
 
-        public virtual void Disconnect() {
+        public virtual void Disconnect(string reason = DisconnectReason.CONNECTION_CLOSED) {
             if(isConnected) {
                 isConnected = false;
                 OnDataReceived = null;
-                onDisconnect.Invoke();
+
+                if(reason != null) SendReliable(new DisconnectPacket(ClientId, reason));
+
+                onDisconnect.Invoke(reason);
             }
+            StopCheckingThreads();
+
             _STATE = "CLOSED";
 
             if(Netamite.MasterClient == this) {
@@ -177,6 +195,8 @@ namespace Netamite.Client.Definition {
 
                     _STATE = "CONNECTED";
                     isConnected = true;
+                    
+                    StartCheckingThreads();
 
                     OnConnect();
                 }
@@ -187,10 +207,34 @@ namespace Netamite.Client.Definition {
         }
 
         public void DataHandler(NetPacket packet) {
+            if(!isConnected) return;
+
             // Check if the Packet has a built in Implementation
             if(!ProcessPacket(packet, this)) {
                 // If there is no built in Implementation, just continue
                 OnDataReceived?.Invoke(packet);
+            }
+        }
+        private Thread pingChecker = null;
+        private CancellationTokenSource additionalServerThreadsCancellation = new CancellationTokenSource();
+        private void StartCheckingThreads() {
+            if(PingDelay > 0) {
+                pingChecker = new Thread(PingThread) { IsBackground = true };
+                pingChecker.Start();
+            }
+        }
+        private void StopCheckingThreads() {
+            additionalServerThreadsCancellation.Cancel();
+            if(pingChecker != null) {
+                pingChecker.Abort();
+                pingChecker = null;
+            }
+        }
+        private void PingThread() {
+            while(!additionalServerThreadsCancellation.IsCancellationRequested && PingDelay > 0) {
+                Send(new PingPacket());
+
+                Thread.Sleep(PingDelay);
             }
         }
     }

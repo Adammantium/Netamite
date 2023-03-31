@@ -1,7 +1,10 @@
 ﻿using Netamite.Client.Definition;
+using Netamite.Datatype;
+using Netamite.Logging;
 using Netamite.Network.Packet.Attributes;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;
+using System.Drawing;
 
 namespace Netamite.Network.Packet.Implementations {
     [PacketDefinition((byte) PacketType.DISCONNECT)]
@@ -18,14 +21,14 @@ namespace Netamite.Network.Packet.Implementations {
 
         public override bool ProcessClient(NetamiteClient client) {
             if(client.ClientId == ClientId) {
-                client.Disconnect();
+                client.Disconnect(Reason);
                 return true;
             }
             return base.ProcessClient(client);
         }
 
         public override bool ProcessServer(NetamiteServer server, ClientInformation client) {
-            server.ClientLeft(client);
+            server.ClientLeft(client, Reason);
             return true;
         }
     }

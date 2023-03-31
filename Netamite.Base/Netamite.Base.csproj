@@ -50,8 +50,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Client\Implementation\IPClient.cs" />
-    <Compile Include="Client\Implementation\SteamClient.cs" />
     <Compile Include="Datatype\Color.cs" />
+    <Compile Include="Datatype\DisconnectReason.cs" />
     <Compile Include="Datatype\Half.cs" />
     <Compile Include="Datatype\Quaternion.cs" />
     <Compile Include="Datatype\Vector3.cs" />

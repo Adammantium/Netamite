@@ -1,4 +1,5 @@
-﻿using Netamite.Logging;
+﻿using Netamite.Datatype;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Socket;
@@ -108,13 +109,12 @@ namespace Netamite.Steam.Server {
             }
         }
 
-        public override void ClientLeft(ClientInformation client) {
-            if(steamUserIdMapping.ContainsKey(client.ClientId)) {
-                SendReliableTo(client, new DisconnectPacket(client.ClientId, "Connection closed"));
-            }
-            SendReliableToAllExcept(new DisconnectPacket(client.ClientId, "Connection closed"), client.ClientId);
+        public override void ClientLeft(ClientInformation client, string reason = DisconnectReason.CONNECTION_CLOSED) {
+            base.ClientLeft(client, reason);
 
-            base.ClientLeft(client);
+            if(steamUserIdMapping.ContainsKey(client.ClientId)) {
+                steamUserIdMapping.Remove(client.ClientId);
+            }
         }
 
         internal void OnLobbyCreate(LobbyCreated_t req) {
@@ -160,7 +160,11 @@ namespace Netamite.Steam.Server {
                 if(Netamite.MasterClient is SteamClient) {
                     SteamClient c = (SteamClient) Netamite.MasterClient;
                     if(c.ClientId == client.ClientId || SteamIntegration.SteamID == target) {
-                        c.OnDataReceived?.Invoke(packet);
+                        if(c.isConnected) {
+                            c.DataHandler(packet);
+                        } else {
+                            c.AwaitingConnectionHandler(packet);
+                        }
                         return;
                     }
                 }

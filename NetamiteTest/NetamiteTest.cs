@@ -12,6 +12,9 @@ namespace NetamiteTest {
             Console.WriteLine("==> STEAM");
             SteamTest.DoTest();
 
+            Console.WriteLine("");
+            Console.WriteLine("==> TIMEOUT TEST");
+            TimeoutTest.DoTest();
 
             Console.WriteLine("");
             Console.WriteLine(">>>>> TEST DONE <<<<<<");

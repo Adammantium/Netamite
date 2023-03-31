@@ -1,5 +1,6 @@
 ﻿using AMP.Network.Helper;
 using Netamite.Client.Definition;
+using Netamite.Datatype;
 using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
@@ -62,7 +63,7 @@ namespace Netamite.Client.Implementation {
                     udp.QueuePacket(new WelcomePacket(ClientId));
                     Thread.Sleep(100);
                 }
-            });
+            }) { IsBackground = true };
             udpLinkThread.Name = "UdpLinker";
             udpLinkThread.Start();
         }
@@ -72,10 +73,11 @@ namespace Netamite.Client.Implementation {
             Disconnect();
         }
 
-        public override void Disconnect() {
+        public override void Disconnect(string reason = DisconnectReason.CONNECTION_CLOSED) {
+            base.Disconnect(reason);
+
             if(tcp != null) {
                 tcp.onDisconnect -= onConnectionAbort;
-                tcp.QueuePacket(new DisconnectPacket(0, "Connection closed"));
                 tcp.Disconnect();
                 tcp = null;
             }
@@ -85,8 +87,6 @@ namespace Netamite.Client.Implementation {
                 udp = null;
             }
             onConnect -= LinkUDP;
-
-            base.Disconnect();
         }
 
         public override void SendReliable(NetPacket packet) {
