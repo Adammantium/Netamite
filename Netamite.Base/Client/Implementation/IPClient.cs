@@ -42,13 +42,13 @@ namespace Netamite.Client.Implementation {
             }
         }
 
-        public override void OnConnect() {
+        public override void InvokeOnConnect() {
             if(tcp != null) {
                 tcp.onPacket = null;
                 tcp.onPacket = onTcpPacketReceived;
             }
             LinkUDP();
-            base.OnConnect();
+            base.InvokeOnConnect();
         }
 
         private void LinkUDP() {
@@ -86,7 +86,7 @@ namespace Netamite.Client.Implementation {
                 udp.Disconnect();
                 udp = null;
             }
-            onConnect -= LinkUDP;
+            OnConnect -= LinkUDP;
         }
 
         public override void SendReliable(NetPacket packet) {

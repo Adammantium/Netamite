@@ -59,8 +59,6 @@ namespace Netamite.Steam.Socket {
                     if(size == 0) return;
                     if(data.Length == 0) return;
 
-                    BytesReceive += (int) size;
-
                     HandleData((ulong)sender, data);
                 }
                 Thread.Sleep(1);

@@ -33,7 +33,7 @@ namespace NetamiteTest {
             server.OnStart += (delay) => {
                 Log.Info(Defines.SERVER, $"Started after {delay}ms.");
             };
-            server.OnClose += () => {
+            server.OnStop += () => {
                 Log.Info(Defines.SERVER, "Server closed");
             };
             server.ConnectToken = "";
@@ -56,13 +56,13 @@ namespace NetamiteTest {
             NetamiteClient client = new IPClient(address, port);
             client.ClientName = "Client " + id;
 
-            client.onConnect += () => {
+            client.OnConnect += () => {
                 Log.Info(Defines.CLIENT + " " + id, "CONNECTED");
             };
-            client.onConnectionError += (message) => {
+            client.OnConnectionError += (message) => {
                 Log.Info(Defines.CLIENT + " " + id, "CONNECTION REFUSED: " + message);
             };
-            client.onDisconnect += (reason) => {
+            client.OnDisconnect += (reason) => {
                 Log.Info(Defines.CLIENT + " " + id, "Disconnect: " + reason);
             };
             client.OnDataReceived += (packet) => {
@@ -76,7 +76,7 @@ namespace NetamiteTest {
             // Disable the automatic pinging of the server so the client will timeout
             client.PingDelay = 0;
 
-            while(client.isConnected) {
+            while(client.IsConnected) {
                 Console.Write(".");
                 Thread.Sleep(500);
             }

@@ -28,7 +28,7 @@ namespace NetamiteTest {
             server.OnStart += (delay) => {
                 Log.Info(Defines.SERVER, $"Started after {delay}ms.");
             };
-            server.OnClose += () => {
+            server.OnStop += () => {
                 Log.Info(Defines.SERVER, "Server closed");
             };
             server.ConnectToken = "";
@@ -51,13 +51,13 @@ namespace NetamiteTest {
             NetamiteClient client = new IPClient(address, port);
             client.ClientName = "Client " + id;
 
-            client.onConnect += () => {
+            client.OnConnect += () => {
                 Log.Info(Defines.CLIENT + " " + id, "CONNECTED");
             };
-            client.onConnectionError += (message) => {
+            client.OnConnectionError += (message) => {
                 Log.Info(Defines.CLIENT + " " + id, "CONNECTION REFUSED: " + message);
             };
-            client.onDisconnect += (reason) => {
+            client.OnDisconnect += (reason) => {
                 Log.Info(Defines.CLIENT + " " + id, "Disconnect: " + reason);
             };
             client.OnDataReceived += (packet) => {
@@ -66,13 +66,15 @@ namespace NetamiteTest {
             client.Connect("");
 
             Thread.Sleep(1000);
-            if(client.isConnected) {
-                Log.Debug(Defines.CLIENT + " " + id, "UNRELIABLE");
+            if(client.IsConnected) {
+                Log.Debug(Defines.CLIENT + " " + id, "RELIABLE");
                 client.SendReliable(new MessagePacket("TCP WHOOP"));
 
                 Thread.Sleep(500);
-                Log.Debug(Defines.CLIENT + " " + id, "RELIABLE");
-                client.SendUnreliable(new MessagePacket("UDP WHOOP"));
+                for(int i = 0; i < 10; i++) {
+                    Log.Debug(Defines.CLIENT + " " + id, "UNRELIABLE");
+                    client.SendUnreliable(new MessagePacket("UDP WHOOP"));
+                }
                 Thread.Sleep(500);
 
                 client.Disconnect();

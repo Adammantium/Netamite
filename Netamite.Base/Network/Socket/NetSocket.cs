@@ -15,25 +15,6 @@ namespace Netamite.Network.Socket {
         public Action<NetPacket> onPacket;
         public Action onDisconnect;
 
-        internal int _BytesSent = 0;
-        public int BytesSent {
-            set { _BytesSent = value; }
-            get { 
-                int val = _BytesSent;
-                _BytesSent = 0;
-                return val;
-            }
-        }
-        internal int _BytesReceived = 0;
-        public int BytesReceive {
-            set { _BytesSent = value; }
-            get {
-                int val = _BytesSent;
-                _BytesSent = 0;
-                return val;
-            }
-        }
-
         private List<byte> packet_buffer = new List<byte>();
 
         public bool closing = false;
@@ -47,7 +28,7 @@ namespace Netamite.Network.Socket {
                                                       );
             #endif
 
-            while(packet_buffer.Count > 3) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
+            while(packet_buffer.Count > 4) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
                 short length = BitConverter.ToInt16(new byte[] { packet_buffer[0], packet_buffer[1] }, 0);
 
                 if(length <= 0) {
@@ -82,7 +63,6 @@ namespace Netamite.Network.Socket {
             } catch(Exception e) {
                 Log.Err(e);
             }
-            _BytesReceived += packet.GetData().Length;
         }
 
         internal BlockingCollection<NetPacket> processPacketQueue = new BlockingCollection<NetPacket>(); 
@@ -105,8 +85,6 @@ namespace Netamite.Network.Socket {
                     bool has = processPacketQueue.TryTake(out packet, -1, cancellationTokenSource.Token); // This will wait non blocking for an item to arrive at the queue
                     if(cancellationTokenSource.IsCancellationRequested) return;
                     if(!has) continue;
-
-                    _BytesSent += packet.GetData().Length;
 
                     if(packet == null) continue;
                     SendPacket(packet);

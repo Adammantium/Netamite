@@ -105,26 +105,9 @@ namespace Netamite.Server.Implementation {
                 if(udpListener == null) return;
                 udpListener.BeginReceive(UDPRequestCallback, null);
 
-                if(data == null || data.Length <= 1) return;
+                if(data == null || data.Length <= 2) return;
 
-                // Check if its a welcome package and if the user is not linked up
-                using(NetPacket packet = NetPacket.ReadPacket(data, true)) {
-                    if(packet is WelcomePacket) {
-                        int clientId = ((WelcomePacket) packet).ClientId;
 
-                        // If no udp is connected, then link up
-                        if(!udpConnections.ContainsKey(clientId) && _clients.ContainsKey(clientId)) {
-                            UdpSocket udpSocket = new UdpSocket(clientEndPoint);
-                            udpConnections.TryAdd(clientId, new UdpSocket(clientEndPoint));
-
-                            ClientInformation clientInformation = _clients[clientId];
-                            udpSocket.onPacket = null;
-
-                            Log.Debug("[Server] Linked UDP for " + clientInformation.ClientName + " (" + clientEndPoint + ")");
-                            return;
-                        }
-                    }
-                }
 
                 // Determine client id by EndPoint
                 bool found = false;
@@ -139,7 +122,24 @@ namespace Netamite.Server.Implementation {
                     }
                 }
                 if(!found) {
-                    //Log.Err(Defines.SERVER, $"Invalid UDP client tried to connect {clientEndPoint}");
+                    // Check if its a welcome package and if the user is not linked up
+                    using(NetPacket packet = NetPacket.ReadPacket(data, true)) {
+                        if(packet is WelcomePacket) {
+                            int clientId = ((WelcomePacket) packet).ClientId;
+
+                            // If no udp is connected, then link up
+                            if(!udpConnections.ContainsKey(clientId) && _clients.ContainsKey(clientId)) {
+                                UdpSocket udpSocket = new UdpSocket(clientEndPoint);
+                                udpConnections.TryAdd(clientId, new UdpSocket(clientEndPoint));
+
+                                ClientInformation clientInformation = _clients[clientId];
+                                udpSocket.onPacket = null;
+
+                                Log.Debug(Defines.SERVER, "Linked UDP for " + clientInformation.ClientName + " (" + clientEndPoint + ")");
+                                return;
+                            }
+                        }
+                    }
                 }
             } catch(Exception e) {
                 Log.Err(Defines.SERVER, $"Error receiving UDP data: {e}");

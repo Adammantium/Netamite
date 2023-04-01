@@ -16,10 +16,10 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
+    <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;DEBUG_MESSAGES</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;DEBUG_MESSAGES,UNITY</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -47,6 +47,9 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>G:\Steam\steamapps\common\Blade &amp; Sorcery\BladeAndSorcery_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Client\Implementation\IPClient.cs" />
@@ -56,6 +59,7 @@
     <Compile Include="Datatype\Quaternion.cs" />
     <Compile Include="Datatype\Vector3.cs" />
     <Compile Include="Defines.cs" />
+    <Compile Include="Extension\GetReferencedAssemblies.cs" />
     <Compile Include="Extension\MemberInfoExtension.cs" />
     <Compile Include="Helper\TimeHelper.cs" />
     <Compile Include="Logging\Log.cs" />

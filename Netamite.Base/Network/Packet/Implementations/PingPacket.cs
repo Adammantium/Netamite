@@ -6,7 +6,7 @@ using Netamite.Server.Data;
 using Netamite.Server.Definition;
 
 namespace Netamite.Network.Packet.Implementations {
-    [PacketDefinition((byte) PacketType.PING)]
+    [PacketDefinition(false, (byte) PacketType.PING)]
     public class PingPacket : NetPacket {
         [SyncedVar] public long timestamp = 0;
 

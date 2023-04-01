@@ -30,7 +30,11 @@ namespace Netamite.Steam.Integration {
 
         public static bool Initialize(long AppId, bool withCallbackThread = true) {
             _isInitialized = false;
-            _isInitialized = SteamAPI.Init();
+            try {
+                _isInitialized = SteamAPI.Init();
+            }catch(System.Exception) {
+                _isInitialized = false;
+            }
             if(!_isInitialized) {
                 OnError?.Invoke(new SteamNotDetectedException());
                 return false;

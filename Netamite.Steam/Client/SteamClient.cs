@@ -125,7 +125,7 @@ namespace Netamite.Steam.Client {
             }
             lobbyEnteredEvent = req.m_ulSteamIDLobby;
         }
-        public override void OnConnect() {
+        public override void InvokeOnConnect() {
             sendReliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable, ClientId);
             sendReliableSocket.StopReceiving();
             sendUnreliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, ClientId);
@@ -133,7 +133,7 @@ namespace Netamite.Steam.Client {
 
             Log.Info(Defines.CLIENT, $"Lobby {lobbyId} entered!");
 
-            base.onConnect();
+            base.InvokeOnConnect();
         }
 
         internal void OnLobbyChatUpdate(LobbyChatUpdate_t req) {
@@ -158,19 +158,19 @@ namespace Netamite.Steam.Client {
             if(allow) {
                 SteamNetworking.AcceptP2PSessionWithUser(req.m_steamIDRemote);
             } else {
-                onWarning?.Invoke("Connection denied from unknown SteamId " + req.m_steamIDRemote);
+                OnWarning?.Invoke("Connection denied from unknown SteamId " + req.m_steamIDRemote);
             }
         }
 
         private void OnReliableReceivedWithId(ulong steamId, NetPacket p) {
-            if(isConnected) {
+            if(IsConnected) {
                 OnReliableReceived(p);
             } else {
                 AwaitingConnectionHandler(p);
             }
         }
         private void OnUnreliableReceivedWithId(ulong steamId, NetPacket p) {
-            if(isConnected) {
+            if(IsConnected) {
                 OnUnreliableReceived(p);
             } else {
                 AwaitingConnectionHandler(p);
@@ -180,7 +180,7 @@ namespace Netamite.Steam.Client {
         internal void OnP2PSessionConnectFail(P2PSessionConnectFail_t req) {
             if(req.m_steamIDRemote != currentLobby.OwnerId) return;
 
-            onConnectionError?.Invoke("Steam P2P Session Connect failed");
+            OnConnectionError?.Invoke("Steam P2P Session Connect failed");
             Disconnect();
         }
     }

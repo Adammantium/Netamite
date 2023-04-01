@@ -1,35 +1,47 @@
 ﻿using Netamite.Client.Definition;
 using Netamite.Extension;
+using Netamite.Logging;
 using Netamite.Network.Packet.Attributes;
 using Netamite.Network.Packet.Exceptions;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
 namespace Netamite.Network.Packet {
     [PacketDefinition((byte) PacketType.UNKNOWN)]
     public class NetPacket : IDisposable {
-        private static ConcurrentDictionary<short, Type> packetTypes = new ConcurrentDictionary<short, Type>();
+        private static ConcurrentDictionary<byte, Type> packetTypes = new ConcurrentDictionary<byte, Type>();
 
         internal static void BuildPacketImplementationCache() {
-            Type[] typelist = Assembly.GetAssembly(typeof(NetPacket)).GetTypes().ToArray();
+            foreach(Assembly assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+                Type[] typelist = null;
+                
+                try {
+                    typelist = assembly.GetTypes().ToArray();
+                }catch(Exception) {
+                    continue;
+                }
 
-            for(int i = 0; i < typelist.Length; i++) {
-                short thisPacketType = (short) getPacketType(typelist[i]);
+                for(int i = 0; i < typelist.Length; i++) {
+                    byte thisPacketType = getPacketType(typelist[i]);
 
-                if(packetTypes.ContainsKey(thisPacketType)) continue;
-                packetTypes.TryAdd(thisPacketType, typelist[i]);
+                    if(thisPacketType <= 0) continue;
+
+                    if(packetTypes.ContainsKey(thisPacketType)) continue;
+                    packetTypes.TryAdd(thisPacketType, typelist[i]);
+                }
             }
         }
 
         private static Type GetPacketImplementation(PacketType packetType) {
             if(packetType == PacketType.UNKNOWN) return null;
 
-            if(packetTypes.ContainsKey((short) packetType)) {
-                return packetTypes[(short) packetType];
+            if(packetTypes.ContainsKey((byte) packetType)) {
+                return packetTypes[(byte) packetType];
             }
 
             Type[] typelist = Assembly.GetAssembly(typeof(NetPacket)).GetTypes().ToArray();
@@ -37,8 +49,8 @@ namespace Netamite.Network.Packet {
             for(int i = 0; i < typelist.Length; i++) {
                 PacketType thisPacketType = (PacketType) getPacketType(typelist[i]);
                 if(thisPacketType == packetType) {
-                    if(packetTypes.ContainsKey((short) thisPacketType)) continue;
-                    packetTypes.TryAdd((short) thisPacketType, typelist[i]);
+                    if(packetTypes.ContainsKey((byte) thisPacketType)) continue;
+                    packetTypes.TryAdd((byte) thisPacketType, typelist[i]);
                     return typelist[i];
                 }
             }
@@ -174,10 +186,12 @@ namespace Netamite.Network.Packet {
         }
 
         private static byte getPacketType(Type type) {
-            Attribute attribute = type.GetCustomAttribute(typeof(PacketDefinition), true);
-            if(attribute != null) { 
-                return ((PacketDefinition) attribute).packetType;
-            }
+            try {
+                Attribute attribute = type.GetCustomAttribute(typeof(PacketDefinition), true);
+                if(attribute != null) { 
+                    return ((PacketDefinition) attribute).packetType;
+                }
+            }catch(Exception) { }
             return (byte) PacketType.UNKNOWN;
         }
 

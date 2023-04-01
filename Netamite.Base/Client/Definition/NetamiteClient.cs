@@ -24,7 +24,7 @@ namespace Netamite.Client.Definition {
             set { _STATE = value; }
         }
 
-        public bool isConnected = false;
+        public bool IsConnected = false;
 
         private string _ClientName = "UNNAMED";
         public string ClientName { 
@@ -59,10 +59,11 @@ namespace Netamite.Client.Definition {
             set { _PingDelay = value; }
         }
 
-        internal ulong unreliableSent = 0;
-        internal ulong reliableSent = 0;
-        internal ulong unreliableReceive = 0;
-        internal ulong reliableReceive = 0;
+        internal int unreliableSent = 0;
+        internal int reliableSent = 0;
+        internal int unreliableReceive = 0;
+        internal int reliableReceive = 0;
+
 
         internal long lastServerTimestamp = 0;
         internal long serverTimestampTime = 0;
@@ -99,10 +100,10 @@ namespace Netamite.Client.Definition {
 
         public Action<NetPacket> OnDataReceived;
 
-        public Action onConnect;
-        public Action<string> onConnectionError;
-        public Action<string> onDisconnect;
-        public Action<string> onWarning;
+        public Action OnConnect;
+        public Action<string> OnConnectionError;
+        public Action<string> OnDisconnect;
+        public Action<string> OnWarning;
 
         public NetamiteClient() {
             NetPacket.BuildPacketImplementationCache();
@@ -111,8 +112,8 @@ namespace Netamite.Client.Definition {
             }
         }
 
-        internal ulong GetBytesSent() {
-            ulong bytesSent = unreliableSent + reliableSent;
+        public int GetBytesSent() {
+            int bytesSent = unreliableSent + reliableSent;
 
             unreliableSent = 0;
             reliableSent = 0;
@@ -120,8 +121,8 @@ namespace Netamite.Client.Definition {
             return bytesSent;
         }
 
-        internal ulong GetBytesReceive() {
-            ulong bytesReceive = unreliableReceive + reliableReceive;
+        public int GetBytesReceive() {
+            int bytesReceive = unreliableReceive + reliableReceive;
 
             unreliableReceive = 0;
             reliableReceive = 0;
@@ -130,7 +131,7 @@ namespace Netamite.Client.Definition {
         }
 
         public virtual void Connect(string accessToken = "") {
-            if(isConnected) {
+            if(IsConnected) {
                 Disconnect();
             }
             _STATE = "CONNECTING";
@@ -139,13 +140,13 @@ namespace Netamite.Client.Definition {
         }
 
         public virtual void Disconnect(string reason = DisconnectReason.CONNECTION_CLOSED) {
-            if(isConnected) {
-                isConnected = false;
+            if(IsConnected) {
+                IsConnected = false;
                 OnDataReceived = null;
 
                 if(reason != null) SendReliable(new DisconnectPacket(ClientId, reason));
 
-                onDisconnect.Invoke(reason);
+                OnDisconnect.Invoke(reason);
             }
             StopCheckingThreads();
 
@@ -175,8 +176,8 @@ namespace Netamite.Client.Definition {
             unreliableReceive++;
         }
 
-        public virtual void OnConnect() {
-            onConnect?.Invoke();
+        public virtual void InvokeOnConnect() {
+            OnConnect?.Invoke();
         }
 
         public void EstablishConnection() {
@@ -188,26 +189,26 @@ namespace Netamite.Client.Definition {
 
         public void AwaitingConnectionHandler(NetPacket packet) {
             if(packet is WelcomePacket) {
-                if(!isConnected) {
+                if(!IsConnected) {
                     OnDataReceived -= AwaitingConnectionHandler;
 
                     ClientId = ((WelcomePacket) packet).ClientId;
 
                     _STATE = "CONNECTED";
-                    isConnected = true;
+                    IsConnected = true;
                     
                     StartCheckingThreads();
 
-                    OnConnect();
+                    InvokeOnConnect();
                 }
             } else if(packet is ErrorPacket) {
                 Disconnect();
-                onConnectionError?.Invoke(((ErrorPacket) packet).message);
+                OnConnectionError?.Invoke(((ErrorPacket) packet).message);
             }
         }
 
         public void DataHandler(NetPacket packet) {
-            if(!isConnected) return;
+            if(!IsConnected) return;
 
             // Check if the Packet has a built in Implementation
             if(!ProcessPacket(packet, this)) {

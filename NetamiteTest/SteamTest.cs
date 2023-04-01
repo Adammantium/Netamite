@@ -42,7 +42,7 @@ namespace NetamiteTest {
                 server.OnStart += (delay) => {
                     Log.Info(Defines.SERVER, $"Started after {delay}ms.");
                 };
-                server.OnClose += () => {
+                server.OnStop += () => {
                     Log.Info(Defines.SERVER, "Server closed");
                     SteamIntegration.Shutdown();
                 };
@@ -76,13 +76,13 @@ namespace NetamiteTest {
         }
 
         private static void Connect(int id, NetamiteClient client) {
-            client.onConnect += () => {
+            client.OnConnect += () => {
                 Log.Info(Defines.CLIENT + " " + id, "CONNECTED");
             };
-            client.onConnectionError += (message) => {
+            client.OnConnectionError += (message) => {
                 Log.Info(Defines.CLIENT + " " + id, "CONNECTION REFUSED: " + message);
             };
-            client.onDisconnect += (reason) => {
+            client.OnDisconnect += (reason) => {
                 Log.Info(Defines.CLIENT + " " + id, "Disconnect: " + reason);
             };
             client.OnDataReceived += (packet) => {
@@ -91,7 +91,7 @@ namespace NetamiteTest {
             client.Connect("");
 
             Thread.Sleep(2500);
-            if(client.isConnected) {
+            if(client.IsConnected) {
                 Log.Debug(Defines.CLIENT + " " + id, "UNRELIABLE");
                 client.SendReliable(new MessagePacket("UNRELIABLE"));
 

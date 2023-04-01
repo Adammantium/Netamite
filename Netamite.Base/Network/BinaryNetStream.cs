@@ -2,7 +2,10 @@
 using Netamite.Network.Packet;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Xml.Linq;
 
 namespace Netamite.Network {
     public class BinaryNetStream {
@@ -13,47 +16,47 @@ namespace Netamite.Network {
         private bool disposed;
 
 
-        internal BinaryNetStream() {
+        public BinaryNetStream() {
             readPos = 0;
         }
 
-        internal BinaryNetStream(PacketType type) {
+        public BinaryNetStream(PacketType type) {
             readPos = 0;
             Write((byte) type);
         }
 
-        internal BinaryNetStream(byte[] data) {
+        public BinaryNetStream(byte[] data) {
             readPos = 0;
             SetBytes(data);
         }
 
-        internal void SetBytes(byte[] data) {
+        public void SetBytes(byte[] data) {
             Write(data);
             readableBuffer = buffer.ToArray();
         }
 
-        internal void InsertInt(int value) {
+        public void InsertInt(int value) {
             buffer.InsertRange(0, BitConverter.GetBytes(value));
         }
 
-        internal byte[] ToArray() {
+        public byte[] ToArray() {
             readableBuffer = buffer.ToArray();
             return readableBuffer;
         }
 
-        internal int Length() {
+        public int Length() {
             return buffer.Count;
         }
 
-        internal int UnreadLength() {
+        public int UnreadLength() {
             return Length() - readPos;
         }
 
-        internal void ResetPos() {
+        public void ResetPos() {
             readPos = 0;
         }
 
-        internal void Reset(bool shouldReset = true) {
+        public void Reset(bool shouldReset = true) {
             if(shouldReset) {
                 buffer.Clear();
                 readableBuffer = null;
@@ -64,91 +67,91 @@ namespace Netamite.Network {
         }
 
         #region Write to the Buffer
-        internal void WriteLength() {
+        public void WriteLength() {
             buffer.InsertRange(0, BitConverter.GetBytes((short) buffer.Count));
         }
 
-        internal void Write(byte value) {
+        public void Write(byte value) {
             buffer.Add(value);
         }
 
-        internal void Write(byte[] value) {
+        public void Write(byte[] value) {
             buffer.AddRange(value);
         }
 
-        internal void Write(short value) {
+        public void Write(short value) {
             buffer.AddRange(BitConverter.GetBytes(value));
         }
 
-        internal void Write(ushort value) {
+        public void Write(ushort value) {
             buffer.AddRange(BitConverter.GetBytes(value));
         }
 
-        internal void Write(uint value) {
+        public void Write(uint value) {
             buffer.AddRange(BitConverter.GetBytes(value));
         }
 
-        internal void Write(int value) {
+        public void Write(int value) {
             buffer.AddRange(BitConverter.GetBytes(value));
         }
 
-        internal void Write(ulong value) {
+        public void Write(ulong value) {
             buffer.AddRange(BitConverter.GetBytes(value));
         }
 
-        internal void Write(long value) {
+        public void Write(long value) {
             buffer.AddRange(BitConverter.GetBytes(value));
         }
 
-        internal void Write(float value) {
+        public void Write(float value) {
             buffer.AddRange(BitConverter.GetBytes(value));
         }
 
-        internal void WriteLP(float value) { // Write Low Precision
+        public void WriteLP(float value) { // Write Low Precision
             Write(Half.GetBytes(new Half(value)));
         }
 
-        internal void Write(bool value) {
+        public void Write(bool value) {
             buffer.AddRange(BitConverter.GetBytes(value));
         }
 
-        internal void Write(string value) {
+        public void Write(string value) {
             byte[] str_bytes = Encoding.UTF8.GetBytes(value);
 
             Write((ushort) str_bytes.Length);
             if(str_bytes.Length > 0) buffer.AddRange(str_bytes);
         }
 
-        internal void Write(Vector3 value) {
+        public void Write(Vector3 value) {
             Write(value.x);
             Write(value.y);
             Write(value.z);
         }
 
-        internal void WriteLP(Vector3 value) { // Write Low Precision
+        public void WriteLP(Vector3 value) { // Write Low Precision
             WriteLP(value.x);
             WriteLP(value.y);
             WriteLP(value.z);
         }
 
-        internal void Write(Quaternion value) {
+        public void Write(Quaternion value) {
             Write(value.x);
             Write(value.y);
             Write(value.z);
             Write(value.w);
         }
 
-        internal void WriteLP(Quaternion value) {
+        public void WriteLP(Quaternion value) {
             Write(value.Compress());
         }
 
-        internal void Write(Color value) {
+        public void Write(Color value) {
             WriteLP(value.r);
             WriteLP(value.g);
             WriteLP(value.b);
         }
 
-        internal void WriteArray(object[] val, bool lowPrecision = false) {
+        public void WriteArray(object[] val, bool lowPrecision = false) {
             if(val == null) {
                 Write((byte) 0);
                 return;
@@ -165,58 +168,90 @@ namespace Netamite.Network {
             }
         }
 
-        internal void Write(object val, bool lowPrecision = false) {
+        public void WriteRaw(object val) {
+            using(var stream = new MemoryStream()) {
+                var formatter = new BinaryFormatter();
+                formatter.Serialize(stream, val);
+                stream.Flush();
+                stream.Position = 0;
+
+                byte[] bytes = stream.ToArray();
+                buffer.AddRange(bytes);
+            }
+        }
+
+        public void Write(object val, bool lowPrecision = false) {
             Type type = val.GetType();
 
             switch(Type.GetTypeCode(type)) {
                 case TypeCode.Byte:
-                    Write((byte)   val); break;
+                    Write((byte)   val); return;
 
                 case TypeCode.Int16:
-                    Write((short)  val); break;
+                    Write((short)  val); return;
                 case TypeCode.Int32:
-                    Write((int)    val); break;
+                    Write((int)    val); return;
                 case TypeCode.Int64:
-                    Write((long)   val); break;
+                    Write((long)   val); return;
 
                 case TypeCode.UInt16:
-                    Write((ushort) val); break;
+                    Write((ushort) val); return;
                 case TypeCode.UInt32:
-                    Write((uint) val); break;
+                    Write((uint) val); return;
                 case TypeCode.UInt64:
-                    Write((ulong) val); break;
+                    Write((ulong) val); return;
 
                 case TypeCode.String:
-                    Write((string) val); break;
+                    Write((string) val); return;
 
                 case TypeCode.Boolean:
-                    Write((bool)   val); break;
+                    Write((bool)   val); return;
 
                 default:
                     if(type == typeof(float)) {
                         if(lowPrecision) WriteLP((float) val);
                         else             Write  ((float) val);
+                        return;
                     } else if(type == typeof(Quaternion)) {
                         if(lowPrecision) WriteLP((Quaternion) val);
                         else             Write  ((Quaternion) val);
+                        return;
                     } else if(type == typeof(Vector3)) {
                         if(lowPrecision) WriteLP((Vector3) val);
                         else             Write  ((Vector3) val);
+                        return;
                     } else if(type == typeof(Color)) {
                         Write((Color) val);
+                        return;
                     }
+#if UNITY
+                    else if(type == typeof(UnityEngine.Quaternion)) {
+                        if(lowPrecision) WriteLP((Quaternion)(UnityEngine.Quaternion) val);
+                        else Write((Quaternion)(UnityEngine.Quaternion) val);
+                        return;
+                    } else if(type == typeof(UnityEngine.Vector3)) {
+                        if(lowPrecision) WriteLP((Vector3)(UnityEngine.Vector3) val);
+                        else Write((Vector3)(UnityEngine.Vector3) val);
+                        return;
+                    } else if(type == typeof(UnityEngine.Color)) {
+                        Write((Color)(UnityEngine.Color) val);
+                        return;
+                    }
+#endif
 
                     break;
             }
+
+            WriteRaw(val);
         }
         #endregion
 
         #region Read from buffer
-        internal PacketType ReadType(bool moveReadPos = true) {
+        public PacketType ReadType(bool moveReadPos = true) {
             return (PacketType) ReadByte(moveReadPos);
         }
 
-        internal byte ReadByte(bool moveReadPos = true) {
+        public byte ReadByte(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 byte result = readableBuffer[readPos];
                 if(moveReadPos) {
@@ -227,7 +262,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'byte'!");
         }
 
-        internal byte[] ReadBytes(int length, bool moveReadPos = true) {
+        public byte[] ReadBytes(int length, bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 byte[] result = buffer.GetRange(readPos, length).ToArray();
                 if(moveReadPos) {
@@ -238,7 +273,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'byte[]'!");
         }
 
-        internal short ReadShort(bool moveReadPos = true) {
+        public short ReadShort(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 short result = BitConverter.ToInt16(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -249,7 +284,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'short'!");
         }
 
-        internal ushort ReadUShort(bool moveReadPos = true) {
+        public ushort ReadUShort(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 ushort result = BitConverter.ToUInt16(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -260,7 +295,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'ushort'!");
         }
 
-        internal int ReadInt(bool moveReadPos = true) {
+        public int ReadInt(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 int result = BitConverter.ToInt32(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -271,7 +306,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'int'!");
         }
 
-        internal uint ReadUInt(bool moveReadPos = true) {
+        public uint ReadUInt(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 uint result = BitConverter.ToUInt32(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -282,7 +317,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'ushort'!");
         }
 
-        internal long ReadLong(bool moveReadPos = true) {
+        public long ReadLong(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 long result = BitConverter.ToInt64(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -293,7 +328,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'long'!");
         }
 
-        internal ulong ReadULong(bool moveReadPos = true) {
+        public ulong ReadULong(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 ulong result = BitConverter.ToUInt64(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -304,7 +339,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'ushort'!");
         }
 
-        internal float ReadFloat(bool moveReadPos = true) {
+        public float ReadFloat(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 float result = BitConverter.ToSingle(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -315,7 +350,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'float'!");
         }
 
-        internal float ReadFloatLP(bool moveReadPos = true) {
+        public float ReadFloatLP(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 ushort result = BitConverter.ToUInt16(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -326,7 +361,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'ushort'!");
         }
 
-        internal bool ReadBool(bool moveReadPos = true) {
+        public bool ReadBool(bool moveReadPos = true) {
             if(buffer.Count > readPos) {
                 bool result = BitConverter.ToBoolean(readableBuffer, readPos);
                 if(moveReadPos) {
@@ -337,7 +372,7 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'bool'!");
         }
 
-        internal string ReadString(bool moveReadPos = true) {
+        public string ReadString(bool moveReadPos = true) {
             string result;
             try {
                 int num = ReadUShort(true);
@@ -357,18 +392,18 @@ namespace Netamite.Network {
             return result;
         }
 
-        internal Vector3 ReadVector3(bool moveReadPos = true) {
+        public Vector3 ReadVector3(bool moveReadPos = true) {
             return new Vector3(ReadFloat(moveReadPos), ReadFloat(moveReadPos), ReadFloat(moveReadPos));
         }
 
-        internal Vector3 ReadVector3LP(bool moveReadPos = true) {
+        public Vector3 ReadVector3LP(bool moveReadPos = true) {
             return new Vector3(ReadFloatLP(moveReadPos), ReadFloatLP(moveReadPos), ReadFloatLP(moveReadPos));
         }
 
-        internal Quaternion ReadQuaternion(bool moveReadPos = true) {
+        public Quaternion ReadQuaternion(bool moveReadPos = true) {
             return new Quaternion(ReadFloat(moveReadPos), ReadFloat(moveReadPos), ReadFloat(moveReadPos), ReadFloat(moveReadPos));
         }
-        internal Quaternion ReadQuaternionLP(bool moveReadPos = true) {
+        public Quaternion ReadQuaternionLP(bool moveReadPos = true) {
             byte maxIndex = ReadByte(moveReadPos);
             if(maxIndex >= 4 && maxIndex <= 7) {
                 return Quaternion.Decompress(maxIndex);
@@ -380,11 +415,11 @@ namespace Netamite.Network {
             }
         }
 
-        internal Color ReadColor(bool moveReadPos = true) {
+        public Color ReadColor(bool moveReadPos = true) {
             return new Color(ReadFloatLP(moveReadPos), ReadFloatLP(moveReadPos), ReadFloatLP(moveReadPos));
         }
 
-        internal object[] ReadArray(Type type, bool lowPrecision = false, bool moveReadPos = true) {
+        public object[] ReadArray(Type type, bool lowPrecision = false, bool moveReadPos = true) {
             byte length = ReadByte(moveReadPos);
 
             object[] values = new object[length];
@@ -393,8 +428,21 @@ namespace Netamite.Network {
             }
             return values;
         }
-        
-        internal object Read(Type type, bool lowPrecision = false, bool moveReadPos = true) {
+
+        public T ReadRaw<T>() {
+            using(var stream = new MemoryStream(readableBuffer)) {
+                var formatter = new BinaryFormatter();
+                stream.Seek(readPos, SeekOrigin.Begin);
+
+                T val = (T)formatter.Deserialize(stream);
+
+                readPos += (int) stream.Position;
+
+                return val;
+            }
+        }
+
+        public object Read(Type type, bool lowPrecision = false, bool moveReadPos = true) {
             switch(Type.GetTypeCode(type)) {
                 case TypeCode.Byte:
                     return ReadByte(moveReadPos);
@@ -432,6 +480,17 @@ namespace Netamite.Network {
                     } else if(type == typeof(Color)) {
                         return ReadColor();
                     }
+#if UNITY
+                    else if(type == typeof(UnityEngine.Quaternion)) {
+                        if(lowPrecision) return (UnityEngine.Quaternion) ReadQuaternionLP(moveReadPos);
+                        else return (UnityEngine.Quaternion) ReadQuaternion(moveReadPos);
+                    } else if(type == typeof(UnityEngine.Vector3)) {
+                        if(lowPrecision) return (UnityEngine.Vector3) ReadVector3LP(moveReadPos);
+                        else return (UnityEngine.Vector3) ReadVector3(moveReadPos);
+                    } else if(type == typeof(UnityEngine.Color)) {
+                        return (UnityEngine.Color) ReadColor();
+                    }
+#endif
 
                     return null;
             }

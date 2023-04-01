@@ -160,7 +160,7 @@ namespace Netamite.Steam.Server {
                 if(Netamite.MasterClient is SteamClient) {
                     SteamClient c = (SteamClient) Netamite.MasterClient;
                     if(c.ClientId == client.ClientId || SteamIntegration.SteamID == target) {
-                        if(c.isConnected) {
+                        if(c.IsConnected) {
                             c.DataHandler(packet);
                         } else {
                             c.AwaitingConnectionHandler(packet);

@@ -2,8 +2,14 @@
 using System.Collections.Generic;
 
 namespace Netamite.Datatype {
+    [Serializable]
     public class Quaternion {
         public float x, y, z, w;
+
+
+        public static Quaternion identity {
+            get { return new Quaternion(0f, 0f, 0f, 1f); }
+        }
 
         public float this[int i] {
             get { return (i == 0 ? x : (i == 1 ? y : (i == 2 ? z : w))); }
@@ -128,5 +134,16 @@ namespace Netamite.Datatype {
 
             return new Quaternion(a, b, c, d);
         }
+
+#if UNITY
+        public static implicit operator Quaternion(UnityEngine.Quaternion n) {
+            return new Quaternion(n.x, n.y, n.z, n.w);
+        }
+
+
+        public static explicit operator UnityEngine.Quaternion(Quaternion o) {
+            return new UnityEngine.Quaternion(o.x, o.y, o.z, o.w);
+        }
+#endif
     }
 }

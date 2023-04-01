@@ -64,9 +64,28 @@ namespace Netamite.Server.Definition {
             set {  _ClientTimeoutDelay = value; }
         }
 
+        /// <summary>
+        /// Gets called right before OnStart
+        /// You can use this to prepare some data before all the OnStart Events are called
+        /// </summary>
+        public Action<long> BeforeStart;
+        /// <summary>
+        /// Gets called once the server is ready
+        /// </summary>
         public Action<long> OnStart;
-        public Action OnClose;
+        /// <summary>
+        /// Gets called when the Startup fails
+        /// </summary>
         public Action<string> OnStartupError;
+        /// <summary>
+        /// Gets called right before OnStop
+        /// You can use this to prepare some data before all the OnStop Events are called
+        /// </summary>
+        public Action BeforeStop;
+        /// <summary>
+        /// Gets called once the server is stopped
+        /// </summary>
+        public Action OnStop;
         public Action<ClientInformation> OnConnect;
         public Action<ClientInformation, string> OnDisconnect;
         public Action<ClientInformation, NetPacket> OnDataReceived;
@@ -154,7 +173,8 @@ namespace Netamite.Server.Definition {
                     Netamite.MasterServer = null;
                 }
                 StopCheckingThreads();
-                OnClose?.Invoke();
+                BeforeStop?.Invoke();
+                OnStop?.Invoke();
             }
         }
 
@@ -163,10 +183,11 @@ namespace Netamite.Server.Definition {
             if(!started) {
                 startDelay = TimeHelper.Millis;
             } else {
-                long length = TimeHelper.Millis - startDelay;
+                long duration = TimeHelper.Millis - startDelay;
                 StartCheckingThreads();
                 _IsRunning = true;
-                OnStart.Invoke(length);
+                BeforeStart?.Invoke(duration);
+                OnStart?.Invoke(duration);
             }
         }
 
@@ -182,6 +203,15 @@ namespace Netamite.Server.Definition {
                 SendReliableToAllExcept(p, exceptions);
             else
                 SendUnreliableToAllExcept(p, exceptions);
+        }
+
+        public void SendTo(int clientId, NetPacket p) {
+            if(!_clients.ContainsKey(clientId)) return;
+
+            if(p.IsReliable())
+                SendReliableTo(_clients[clientId], p);
+            else
+                SendUnreliableTo(_clients[clientId], p);
         }
 
         public void SendTo(ClientInformation client, NetPacket p) {
