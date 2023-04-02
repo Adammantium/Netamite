@@ -28,7 +28,7 @@ namespace Netamite.Network.Socket {
                                                       );
             #endif
 
-            while(packet_buffer.Count > 4) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
+            while(packet_buffer.Count >= 3) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
                 short length = BitConverter.ToInt16(new byte[] { packet_buffer[0], packet_buffer[1] }, 0);
 
                 if(length <= 0) {

@@ -191,14 +191,14 @@ namespace Netamite.Server.Implementation {
         // Reliable
         public override void SendReliableTo(ClientInformation client, NetPacket p) {
             if(tcpConnections.ContainsKey(client.ClientId)) {
-                tcpConnections[client.ClientId].SendPacket(p);
+                tcpConnections[client.ClientId].QueuePacket(p);
             }
         }
 
         // Unreliable
         public override void SendUnreliableTo(ClientInformation client, NetPacket p) {
             if(udpConnections.ContainsKey(client.ClientId)) {
-                tcpConnections[client.ClientId].SendPacket(p);
+                tcpConnections[client.ClientId].QueuePacket(p);
             }
         }
 

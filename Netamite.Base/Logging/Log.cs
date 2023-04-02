@@ -15,7 +15,8 @@ namespace Netamite.Logging {
 
         public enum LoggerType {
             UNITY,
-            CONSOLE
+            CONSOLE,
+            EVENT_ONLY
         }
 
         public static LoggerType loggerType = LoggerType.CONSOLE;
@@ -117,31 +118,47 @@ namespace Netamite.Logging {
 
         private static void Msg(Type type, string message) {
             try { if(onLogMessage != null) onLogMessage.Invoke(type, message); } catch { }
-            return;
+            if(loggerType == LoggerType.EVENT_ONLY) return;
             switch(type) {
                 case Type.DEBUG:
                     #if DEBUG_MESSAGES
-                    /*if(loggerType == LoggerType.UNITY) UnityEngine.Debug.Log(message);
-                    else if(loggerType == LoggerType.CONSOLE)*/ ConsoleLine(message);
+                    #if UNITY
+                    if(loggerType == LoggerType.UNITY)
+                        UnityEngine.Debug.Log(message);
+                    else if(loggerType == LoggerType.CONSOLE)
+                    #endif
+                        ConsoleLine(message);
                     #endif
 
                     break;
 
                 case Type.INFO:
-                    /*if(loggerType == LoggerType.UNITY) UnityEngine.Debug.Log(message);
-                    else if(loggerType == LoggerType.CONSOLE)*/ ConsoleLine(message);
+                    #if UNITY
+                    if(loggerType == LoggerType.UNITY)
+                        UnityEngine.Debug.Log(message);
+                    else if(loggerType == LoggerType.CONSOLE)
+                    #endif
+                        ConsoleLine(message);
 
                     break;
 
                 case Type.WARNING:
-                    /*if(loggerType == LoggerType.UNITY) UnityEngine.Debug.LogWarning(message);
-                    else if(loggerType == LoggerType.CONSOLE)*/ ConsoleLine($"<color=#FFFF00>{message}</color>");
+                    #if UNITY
+                    if(loggerType == LoggerType.UNITY)
+                        UnityEngine.Debug.LogWarning(message);
+                    else if(loggerType == LoggerType.CONSOLE)
+                    #endif
+                        ConsoleLine($"<color=#FFFF00>{message}</color>");
 
                     break;
 
                 case Type.ERROR:
-                    /*if(loggerType == LoggerType.UNITY) UnityEngine.Debug.LogError(message);
-                    else if(loggerType == LoggerType.CONSOLE)*/ ConsoleLine($"<color=#FF0000>{message}</color>");
+                    #if UNITY
+                    if(loggerType == LoggerType.UNITY)
+                        UnityEngine.Debug.LogError(message);
+                    else if(loggerType == LoggerType.CONSOLE)
+                    #endif
+                        ConsoleLine($"<color=#FF0000>{message}</color>");
 
                     break;
             

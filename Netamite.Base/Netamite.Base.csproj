@@ -59,7 +59,6 @@
     <Compile Include="Datatype\Quaternion.cs" />
     <Compile Include="Datatype\Vector3.cs" />
     <Compile Include="Defines.cs" />
-    <Compile Include="Extension\GetReferencedAssemblies.cs" />
     <Compile Include="Extension\MemberInfoExtension.cs" />
     <Compile Include="Helper\TimeHelper.cs" />
     <Compile Include="Logging\Log.cs" />
