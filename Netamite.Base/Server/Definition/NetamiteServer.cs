@@ -1,7 +1,5 @@
-﻿using Netamite.Client.Implementation;
-using Netamite.Datatype;
+﻿using Netamite.Datatype;
 using Netamite.Helper;
-using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
@@ -9,9 +7,7 @@ using Netamite.Security;
 using Netamite.Server.Data;
 using System;
 using System.Collections.Concurrent;
-using System.Drawing;
 using System.Linq;
-using System.Net.Sockets;
 using System.Threading;
 
 namespace Netamite.Server.Definition {

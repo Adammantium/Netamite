@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace Netamite.Datatype {
+﻿namespace Netamite.Datatype {
     [System.Serializable]
     public class Color {
         public float r, g, b, a;

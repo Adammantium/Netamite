@@ -1,13 +1,11 @@
 ﻿using Netamite.Client.Definition;
 using Netamite.Extension;
-using Netamite.Logging;
 using Netamite.Network.Packet.Attributes;
 using Netamite.Network.Packet.Exceptions;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 

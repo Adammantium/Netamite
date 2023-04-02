@@ -1,6 +1,4 @@
-﻿using Netamite.Client.Implementation;
-using Netamite.Datatype;
-using Netamite.Logging;
+﻿using Netamite.Datatype;
 using Netamite.Network.Packet;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;
@@ -8,9 +6,7 @@ using Netamite.Steam.Datatype;
 using Netamite.Steam.Integration;
 using Netamite.Steam.Socket;
 using Steamworks;
-using System;
 using System.Collections.Generic;
-using System.Threading;
 using SteamClient = Netamite.Steam.Client.SteamClient;
 
 namespace Netamite.Steam.Server {

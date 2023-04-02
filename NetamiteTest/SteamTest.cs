@@ -1,18 +1,15 @@
-﻿using Netamite.Client.Definition;
-using Netamite.Client.Implementation;
+﻿using Netamite;
+using Netamite.Client.Definition;
 using Netamite.Logging;
 using Netamite.Network.Packet.Implementations;
-using Netamite;
 using Netamite.Server.Definition;
-using Netamite.Server.Implementation;
-using Netamite.Steam.Integration;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Threading;
 using Netamite.Steam.Client;
+using Netamite.Steam.Integration;
 using Netamite.Steam.Server;
-using Netamite.Steam.Datatype;
 using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NetamiteTest {
     internal class SteamTest {

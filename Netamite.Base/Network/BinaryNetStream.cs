@@ -1,12 +1,9 @@
 ﻿using Netamite.Datatype;
-using Netamite.Logging;
-using Netamite.Network.Packet;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
-using System.Xml.Linq;
 
 namespace Netamite.Network {
     public class BinaryNetStream {

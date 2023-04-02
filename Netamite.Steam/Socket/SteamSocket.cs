@@ -1,13 +1,10 @@
-﻿using Netamite.Client.Implementation;
-using Netamite.Logging;
+﻿using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Socket;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
 using System.Threading;
-using System.Timers;
 
 namespace Netamite.Steam.Socket {
     public class SteamSocket : NetSocket {

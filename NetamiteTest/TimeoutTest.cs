@@ -1,17 +1,13 @@
-﻿using Netamite.Client.Definition;
+﻿using Netamite;
+using Netamite.Client.Definition;
 using Netamite.Client.Implementation;
 using Netamite.Logging;
-using Netamite.Network.Packet.Implementations;
 using Netamite.Server.Definition;
 using Netamite.Server.Implementation;
-using Netamite;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reflection;
 
 namespace NetamiteTest {
     internal class TimeoutTest {

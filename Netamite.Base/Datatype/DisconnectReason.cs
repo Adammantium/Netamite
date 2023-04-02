@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Netamite.Datatype {
+﻿namespace Netamite.Datatype {
     public class DisconnectReason {
         public const string UNKNOWN            = "UNKNOWN";
         public const string SERVER_CLOSED      = "SERVER_CLOSED";

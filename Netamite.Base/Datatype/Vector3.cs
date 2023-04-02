@@ -1,7 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
-
-namespace Netamite.Datatype {
+﻿namespace Netamite.Datatype {
     [System.Serializable]
     public class Vector3 {
         public float x, y, z;

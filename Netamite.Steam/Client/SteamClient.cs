@@ -1,5 +1,4 @@
 ﻿using Netamite.Client.Definition;
-using Netamite.Client.Implementation;
 using Netamite.Datatype;
 using Netamite.Logging;
 using Netamite.Network.Packet;
@@ -8,8 +7,6 @@ using Netamite.Steam.Integration;
 using Netamite.Steam.Server;
 using Netamite.Steam.Socket;
 using Steamworks;
-using System;
-using System.Net.Sockets;
 
 namespace Netamite.Steam.Client {
     public class SteamClient : NetamiteClient {

@@ -1,5 +1,4 @@
-﻿using Netamite.Logging;
-using Netamite.Steam.Datatype;
+﻿using Netamite.Steam.Datatype;
 using Netamite.Steam.Exception;
 using Steamworks;
 using System;
