@@ -1,9 +1,11 @@
-﻿using Netamite.Logging;
+﻿using Netamite.Client.Implementation;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Socket;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using System.Threading;
 using System.Timers;
 
@@ -23,8 +25,6 @@ namespace Netamite.Steam.Socket {
             this.target = target;
             this.mode = mode;
             this.channel = channel;
-
-            StartProcessing();
         }
 
         public override void SendPacket(NetPacket packet) {
@@ -36,15 +36,17 @@ namespace Netamite.Steam.Socket {
             while(!SteamNetworking.SendP2PPacket(target, data, (uint) data.Length, mode, channel)) {
                 attempts--;
                 if(attempts <= 0) break;
-                Thread.Sleep(0);
+                Thread.Sleep(1);
             }
         }
 
         public override void AwaitData() {
-            if(awaitDataThread != null && awaitDataThread.IsAlive) return;
+            if(awaitDataThread != null) return;
             awaitDataThread = new Thread(ReadSocket);
             awaitDataThread.Name = "SteamSocket Data Read Thread";
             awaitDataThread.Start();
+
+            //Log.Err("SteamSocket Data Read Thread");
         }
 
         private void ReadSocket() {
@@ -56,10 +58,11 @@ namespace Netamite.Steam.Socket {
                     data = new byte[size];
                     SteamNetworking.ReadP2PPacket(data, size, out size, out sender, channel);
 
-                    if(size == 0) return;
-                    if(data.Length == 0) return;
+                    if((ulong) sender == 0) continue;
+                    if(size == 0) continue;
+                    if(data.Length == 0) continue;
 
-                    HandleData((ulong)sender, data);
+                    HandleData((ulong) sender, data);
                 }
                 Thread.Sleep(1);
             }
@@ -79,7 +82,9 @@ namespace Netamite.Steam.Socket {
             while(buffer.Count > 3) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
                 short length = BitConverter.ToInt16(new byte[] { buffer[0], buffer[1] }, 0);
 
-                if(length <= 0) {
+                //Log.Debug("SOCKET", length + " / " + buffer.Count + " / Packet Id: " + buffer[2]); // REMOVE
+
+                if(length <= 0 || buffer[2] == 0) {
                     buffer.Clear();
                     break;
                 }
@@ -87,11 +92,13 @@ namespace Netamite.Steam.Socket {
                 if(buffer.Count >= length + 2) {
                     byte[] packet_data = buffer.GetRange(2, length).ToArray();
 
+                    //Log.Debug("SOCKET", "Packet Data " + packet_data.Length); // REMOVE
                     try {
                         using(NetPacket packet = NetPacket.ReadPacket(packet_data)) {
-                            if(packet == null) break;
-
-                            onPacketWithId?.Invoke(sender, packet);
+                            if(packet != null) {
+                                //Log.Warn("SOCKET", "ReceivedPacket " + sender + " " + packet); // REMOVE
+                                onPacketWithId?.Invoke(sender, packet);
+                            }
                         }
 
                         buffer.RemoveRange(0, length + 2);

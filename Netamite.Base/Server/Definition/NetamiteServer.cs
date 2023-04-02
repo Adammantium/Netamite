@@ -208,10 +208,7 @@ namespace Netamite.Server.Definition {
         public void SendTo(int clientId, NetPacket p) {
             if(!_clients.ContainsKey(clientId)) return;
 
-            if(p.IsReliable())
-                SendReliableTo(_clients[clientId], p);
-            else
-                SendUnreliableTo(_clients[clientId], p);
+            SendTo(_clients[clientId], p);
         }
 
         public void SendTo(ClientInformation client, NetPacket p) {

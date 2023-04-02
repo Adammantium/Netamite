@@ -1,19 +1,15 @@
-﻿using Netamite.Datatype;
+﻿using Netamite.Client.Implementation;
+using Netamite.Datatype;
 using Netamite.Logging;
 using Netamite.Network.Packet;
-using Netamite.Network.Packet.Implementations;
-using Netamite.Network.Socket;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;
-using Netamite.Steam.Client;
 using Netamite.Steam.Datatype;
 using Netamite.Steam.Integration;
 using Netamite.Steam.Socket;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Runtime.Remoting.Channels;
 using System.Threading;
 using SteamClient = Netamite.Steam.Client.SteamClient;
 
@@ -26,9 +22,13 @@ namespace Netamite.Steam.Server {
         private ELobbyType lobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
 
 
-        private Dictionary<int, ulong> steamUserIdMapping = new Dictionary<int, ulong>();
+        private Dictionary<int, ulong> userIdToSteamMapping = new Dictionary<int, ulong>();
+        private Dictionary<ulong, int> steamIdToUserMapping = new Dictionary<ulong, int>();
         private Dictionary<int, SteamSocket> steamUserReliableMapping = new Dictionary<int, SteamSocket>();
         private Dictionary<int, SteamSocket> steamUserUnreliableMapping = new Dictionary<int, SteamSocket>();
+
+        private SteamSocket reliableReceiveSocket;
+        private SteamSocket unreliableReceiveSocket;
 
         public SteamServer(int maxClients, bool friendsOnly = true) : base() {
             MaxClients = maxClients;
@@ -50,12 +50,17 @@ namespace Netamite.Steam.Server {
         public override void Stop() {
             InvokeStopEvent(false); // TODO: Automatically done by the Steam Lobby
 
+            reliableReceiveSocket.Disconnect();
+            unreliableReceiveSocket.Disconnect();
+
             foreach(SteamSocket steamSocket in steamUserReliableMapping.Values) {
                 steamSocket.Disconnect();
             }
             foreach(SteamSocket steamSocket in steamUserUnreliableMapping.Values) {
                 steamSocket.Disconnect();
             }
+
+            steamServerCallbacks.UnregisterCallbacks();
 
             InvokeStopEvent(true);
         }
@@ -70,32 +75,27 @@ namespace Netamite.Steam.Server {
 
         internal void CheckForNewMembers() {
             foreach(LobbyMember member in currentLobby.Members) {
-                if(!steamUserIdMapping.ContainsValue((ulong)member.SteamId)) {
+                if(!userIdToSteamMapping.ContainsValue((ulong)member.SteamId)) {
                     ClientInformation clientInformation = new ClientInformation();
                     clientInformation.ClientName = member.Name;
 
                     clientInformation.ClientId = NextId;
 
-                    steamUserIdMapping.Add(clientInformation.ClientId, (ulong)member.SteamId);
+                    userIdToSteamMapping.Add(clientInformation.ClientId, (ulong) member.SteamId);
+                    steamIdToUserMapping.Add((ulong) member.SteamId, clientInformation.ClientId);
 
-                    SteamSocket reliableSocket = new SteamSocket(member.SteamId, EP2PSend.k_EP2PSendReliable, clientInformation.ClientId);
-                    reliableSocket.StopSending(); // Only needed for receiving, sending will be on channel defined in SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL
-                    reliableSocket.onPacketWithId = (id, p) => {
-                        ProcessPacket(clientInformation, p);
-                    };
-                    SteamSocket unreliableSocket = new SteamSocket(member.SteamId, EP2PSend.k_EP2PSendUnreliableNoDelay, clientInformation.ClientId);
-                    unreliableSocket.StopSending(); // Only needed for receiving, sending will be on channel defined in SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL
-                    unreliableSocket.onPacketWithId = (id, p) => {
-                        ProcessPacket(clientInformation, p);
-                    };
-
+                    SteamSocket reliableSocket = new SteamSocket(member.SteamId, EP2PSend.k_EP2PSendReliable, SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL);
+                    reliableSocket.StartSending();
+                    SteamSocket unreliableSocket = new SteamSocket(member.SteamId, EP2PSend.k_EP2PSendUnreliableNoDelay, SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL);
+                    unreliableSocket.StartSending(); 
+                    
                     steamUserReliableMapping.Add(clientInformation.ClientId, reliableSocket);
                     steamUserUnreliableMapping.Add(clientInformation.ClientId, unreliableSocket);
 
                     ClientJoined(clientInformation);
                 }
             }
-            foreach(KeyValuePair<int, ulong> user in steamUserIdMapping) {
+            foreach(KeyValuePair<int, ulong> user in userIdToSteamMapping) {
                 bool found = false;
                 foreach(LobbyMember member in currentLobby.Members) {
                     if(user.Value == (ulong) member.SteamId) {
@@ -112,8 +112,11 @@ namespace Netamite.Steam.Server {
         public override void ClientLeft(ClientInformation client, string reason = DisconnectReason.CONNECTION_CLOSED) {
             base.ClientLeft(client, reason);
 
-            if(steamUserIdMapping.ContainsKey(client.ClientId)) {
-                steamUserIdMapping.Remove(client.ClientId);
+            if(userIdToSteamMapping.ContainsKey(client.ClientId)) {
+                if(steamIdToUserMapping.ContainsKey(userIdToSteamMapping[client.ClientId])) {
+                    steamIdToUserMapping.Remove(userIdToSteamMapping[client.ClientId]);
+                }
+                userIdToSteamMapping.Remove(client.ClientId);
             }
         }
 
@@ -121,9 +124,27 @@ namespace Netamite.Steam.Server {
             if(req.m_eResult == EResult.k_EResultOK) {
                 SteamIntegration.GetLobbyInfo(req.m_ulSteamIDLobby, ref currentLobby);
 
+                if(reliableReceiveSocket == null) {
+                    reliableReceiveSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable, SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL);
+                    reliableReceiveSocket.StartReceiving();
+                    reliableReceiveSocket.onPacketWithId += OnPacketWithId;
+                }
+                if(unreliableReceiveSocket == null) {
+                    unreliableReceiveSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL);
+                    unreliableReceiveSocket.StartReceiving();
+                    unreliableReceiveSocket.onPacketWithId += OnPacketWithId;
+                }
+
                 base.InvokeStartEvent(true);
             } else {
                 OnStartupError?.Invoke("Steam Lobby creation failed!");
+            }
+        }
+
+        private void OnPacketWithId(ulong steamId, NetPacket p) {
+            if(steamIdToUserMapping.ContainsKey(steamId)) {
+                int userId = steamIdToUserMapping[steamId];
+                ProcessPacket(_clients[userId], p);
             }
         }
 
@@ -146,20 +167,20 @@ namespace Netamite.Steam.Server {
         }
 
         public override void SendReliableTo(ClientInformation client, NetPacket p) {
-            Send(client, EP2PSend.k_EP2PSendReliable, SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL, p);
+            Send(client, true, p);
         }
 
         public override void SendUnreliableTo(ClientInformation client, NetPacket p) {
-            Send(client, EP2PSend.k_EP2PSendUnreliableNoDelay, SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL, p);
+            Send(client, false, p);
         }
 
-        private void Send(ClientInformation client, EP2PSend mode, int channel, NetPacket packet) {
-            if(steamUserIdMapping.ContainsKey(client.ClientId)) {
-                CSteamID target = (CSteamID)steamUserIdMapping[client.ClientId];
+        private void Send(ClientInformation client, bool reliable, NetPacket packet) {
+            if(userIdToSteamMapping.ContainsKey(client.ClientId)) {
+                CSteamID target = (CSteamID) userIdToSteamMapping[client.ClientId];
 
                 if(Netamite.MasterClient is SteamClient) {
                     SteamClient c = (SteamClient) Netamite.MasterClient;
-                    if(c.ClientId == client.ClientId || SteamIntegration.SteamID == target) {
+                    if(SteamIntegration.SteamID == target) {
                         if(c.IsConnected) {
                             c.DataHandler(packet);
                         } else {
@@ -169,15 +190,10 @@ namespace Netamite.Steam.Server {
                     }
                 }
 
-                byte[] data = packet.GetData(true);
-
-                byte attempts = 5;
-                if(mode == EP2PSend.k_EP2PSendUnreliable || mode == EP2PSend.k_EP2PSendUnreliableNoDelay) attempts = 0;
-
-                while(!SteamNetworking.SendP2PPacket(target, data, (uint)data.Length, mode, channel)) {
-                    attempts--;
-                    if(attempts <= 0) break;
-                    Thread.Sleep(0);
+                if(reliable) {
+                    steamUserReliableMapping[client.ClientId].QueuePacket(packet);
+                } else {
+                    steamUserUnreliableMapping[client.ClientId].QueuePacket(packet);
                 }
             }
         }

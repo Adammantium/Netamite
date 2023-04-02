@@ -3,7 +3,7 @@
 namespace Netamite.Network.Packet.Exceptions {
     [Serializable]
     public class PacketMismatch : Exception {
-        public PacketMismatch(PacketType mine, PacketType supplied) 
+        public PacketMismatch(byte mine, byte supplied) 
             : base("Invalid Packet Type, Parser: " + mine + ", Supplied: " + supplied)
             { }
     }

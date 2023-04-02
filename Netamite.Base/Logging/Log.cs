@@ -117,7 +117,7 @@ namespace Netamite.Logging {
 
         private static void Msg(Type type, string message) {
             try { if(onLogMessage != null) onLogMessage.Invoke(type, message); } catch { }
-            
+            return;
             switch(type) {
                 case Type.DEBUG:
                     #if DEBUG_MESSAGES

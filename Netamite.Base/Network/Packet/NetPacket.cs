@@ -37,8 +37,8 @@ namespace Netamite.Network.Packet {
             }
         }
 
-        private static Type GetPacketImplementation(PacketType packetType) {
-            if(packetType == PacketType.UNKNOWN) return null;
+        private static Type GetPacketImplementation(byte packetType) {
+            if(packetType == (byte) PacketType.UNKNOWN) return null;
 
             if(packetTypes.ContainsKey((byte) packetType)) {
                 return packetTypes[(byte) packetType];
@@ -47,10 +47,10 @@ namespace Netamite.Network.Packet {
             Type[] typelist = Assembly.GetAssembly(typeof(NetPacket)).GetTypes().ToArray();
 
             for(int i = 0; i < typelist.Length; i++) {
-                PacketType thisPacketType = (PacketType) getPacketType(typelist[i]);
+                byte thisPacketType = getPacketType(typelist[i]);
                 if(thisPacketType == packetType) {
-                    if(packetTypes.ContainsKey((byte) thisPacketType)) continue;
-                    packetTypes.TryAdd((byte) thisPacketType, typelist[i]);
+                    if(packetTypes.ContainsKey(thisPacketType)) continue;
+                    packetTypes.TryAdd(thisPacketType, typelist[i]);
                     return typelist[i];
                 }
             }
@@ -61,7 +61,7 @@ namespace Netamite.Network.Packet {
             BinaryNetStream stream = new BinaryNetStream(data);
 
             if(hasLength) stream.ReadShort(); // Flush away the length
-            PacketType type = (PacketType) stream.ReadByte(false);
+            byte type = stream.ReadByte(false);
             
             Type implementationType = GetPacketImplementation(type);
             if(implementationType == null) return null;
@@ -135,8 +135,8 @@ namespace Netamite.Network.Packet {
 
             if(hasLength) stream.ReadShort(); // Flush away the length
 
-            PacketType dataPacketType = (PacketType) stream.ReadByte();
-            PacketType myPacketType   = (PacketType) getPacketType();
+            byte dataPacketType = stream.ReadByte();
+            byte myPacketType   = getPacketType();
 
             if(dataPacketType != myPacketType) {
                 throw new PacketMismatch(myPacketType, dataPacketType);
@@ -155,27 +155,31 @@ namespace Netamite.Network.Packet {
                 if(atts.Length > 0) {
                     Type t = memberInfo.GetUnderlyingType();
 
-                    if(t.IsArray) {
-                        object[] val = stream.ReadArray(t.GetElementType(), (atts[0] as SyncedVar).LowPrecision);
+                    try {
+                        if(t.IsArray) {
+                            object[] val = stream.ReadArray(t.GetElementType(), (atts[0] as SyncedVar).LowPrecision);
                         
-                        if(val.Length > 0) {
-                            Array filledArray = Array.CreateInstance(val[0].GetType(), val.Length);
-                            Array.Copy(val, filledArray, val.Length);
+                            if(val.Length > 0) {
+                                Array filledArray = Array.CreateInstance(val[0].GetType(), val.Length);
+                                Array.Copy(val, filledArray, val.Length);
+
+                                #if DEBUG_MESSAGES
+                                //Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + filledArray);
+                                #endif
+
+                                memberInfo.SetValue(this, filledArray);
+                            }
+                        } else {
+                            object val = stream.Read(t, (atts[0] as SyncedVar).LowPrecision);
 
                             #if DEBUG_MESSAGES
-                            //Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + filledArray);
+                            //Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
                             #endif
 
-                            memberInfo.SetValue(this, filledArray);
+                            memberInfo.SetValue(this, val);
                         }
-                    } else {
-                        object val = stream.Read(t, (atts[0] as SyncedVar).LowPrecision);
-
-                        #if DEBUG_MESSAGES
-                        //Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
-                        #endif
-
-                        memberInfo.SetValue(this, val);
+                    }catch(Exception ex) {
+                        throw new Exception("Error on " + myType + " while reading " + memberInfo.Name + "\n" + ex.Message);
                     }
                 }
             }

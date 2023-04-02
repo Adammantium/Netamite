@@ -19,10 +19,8 @@ namespace Netamite.Steam.Client {
 
         public Lobby currentLobby;
 
-        private SteamSocket receiveReliableSocket;
-        private SteamSocket receiveUnreliableSocket;
-        private SteamSocket sendReliableSocket;
-        private SteamSocket sendUnreliableSocket;
+        private SteamSocket reliableSocket;
+        private SteamSocket unreliableSocket;
 
         public SteamClient(ulong lobbyId) : base() {
             this.lobbyId = lobbyId;
@@ -51,14 +49,10 @@ namespace Netamite.Steam.Client {
         public override void Disconnect(string reason = DisconnectReason.CONNECTION_CLOSED) {
             base.Disconnect(reason);
 
-            receiveReliableSocket?.Disconnect();
-            receiveReliableSocket = null;
-            receiveUnreliableSocket?.Disconnect();
-            receiveUnreliableSocket = null;
-            sendReliableSocket?.Disconnect();
-            sendReliableSocket = null;
-            sendUnreliableSocket?.Disconnect();
-            sendUnreliableSocket = null;
+            reliableSocket?.Disconnect();
+            reliableSocket = null;
+            unreliableSocket?.Disconnect();
+            unreliableSocket = null;
 
             LeaveLobby();
 
@@ -83,8 +77,8 @@ namespace Netamite.Steam.Client {
                 }
             }
 
-            if(sendReliableSocket != null) {
-                sendReliableSocket.QueuePacket(packet);
+            if(reliableSocket != null) {
+                reliableSocket.QueuePacket(packet);
                 base.SendReliable(packet);
             }
         }
@@ -98,8 +92,8 @@ namespace Netamite.Steam.Client {
                 }
             }
 
-            if(sendReliableSocket != null) {
-                sendReliableSocket.QueuePacket(packet);
+            if(unreliableSocket != null) {
+                unreliableSocket.QueuePacket(packet);
                 base.SendUnreliable(packet);
             }
         }
@@ -120,17 +114,26 @@ namespace Netamite.Steam.Client {
 
             Log.Info(Defines.CLIENT, $"Lobby {lobbyId} entered, finalizing connection...");
 
-            if(Netamite.MasterServer is SteamServer) {
-                ((SteamServer) Netamite.MasterServer).CheckForNewMembers();
+            if(currentLobby.OwnerId != SteamIntegration.SteamID) {
+                if(reliableSocket == null) {
+                    reliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable, SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL);
+                    reliableSocket.onPacketWithId += OnReliableReceivedWithId;
+                    reliableSocket.StartProcessing();
+                }
+                if(unreliableSocket == null) {
+                    unreliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL);
+                    unreliableSocket.onPacketWithId += OnUnreliableReceivedWithId;
+                    unreliableSocket.StartProcessing();
+                }
+            } else {
+                if(Netamite.MasterServer is SteamServer) {
+                    ((SteamServer)Netamite.MasterServer).CheckForNewMembers();
+                }
             }
+
             lobbyEnteredEvent = req.m_ulSteamIDLobby;
         }
         public override void InvokeOnConnect() {
-            sendReliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable, ClientId);
-            sendReliableSocket.StopReceiving();
-            sendUnreliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, ClientId);
-            sendUnreliableSocket.StartReceiving();
-
             Log.Info(Defines.CLIENT, $"Lobby {lobbyId} entered!");
 
             base.InvokeOnConnect();
@@ -146,13 +149,6 @@ namespace Netamite.Steam.Client {
             bool allow = false;
             if(req.m_steamIDRemote == currentLobby.OwnerId) { // Check if the person trying to connect is the host
                 allow = true;
-
-                receiveReliableSocket   = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendReliable,          SteamNetConfig.STEAM_SERVER_RELIABLE_CHANNEL  );
-                receiveReliableSocket.StopSending();
-                receiveReliableSocket.onPacketWithId += OnReliableReceivedWithId;
-                receiveUnreliableSocket = new SteamSocket(currentLobby.OwnerId, EP2PSend.k_EP2PSendUnreliableNoDelay, SteamNetConfig.STEAM_SERVER_UNRELIABLE_CHANNEL);
-                receiveUnreliableSocket.StopSending();
-                receiveUnreliableSocket.onPacketWithId += OnUnreliableReceivedWithId;
             }
 
             if(allow) {

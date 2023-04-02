@@ -1,4 +1,5 @@
 ﻿using Netamite.Datatype;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using System;
 using System.Collections.Generic;
@@ -20,9 +21,9 @@ namespace Netamite.Network {
             readPos = 0;
         }
 
-        public BinaryNetStream(PacketType type) {
+        public BinaryNetStream(byte type) {
             readPos = 0;
-            Write((byte) type);
+            Write(type);
         }
 
         public BinaryNetStream(byte[] data) {
@@ -118,7 +119,8 @@ namespace Netamite.Network {
         public void Write(string value) {
             byte[] str_bytes = Encoding.UTF8.GetBytes(value);
 
-            Write((ushort) str_bytes.Length);
+            Write(str_bytes.Length);
+            //Log.Warn("WriteString " + str_bytes.Length);
             if(str_bytes.Length > 0) buffer.AddRange(str_bytes);
         }
 
@@ -247,8 +249,8 @@ namespace Netamite.Network {
         #endregion
 
         #region Read from buffer
-        public PacketType ReadType(bool moveReadPos = true) {
-            return (PacketType) ReadByte(moveReadPos);
+        public byte ReadType(bool moveReadPos = true) {
+            return ReadByte(moveReadPos);
         }
 
         public byte ReadByte(bool moveReadPos = true) {
@@ -375,11 +377,12 @@ namespace Netamite.Network {
         public string ReadString(bool moveReadPos = true) {
             string result;
             try {
-                int num = ReadUShort(true);
+                int num = ReadInt(true);
                 //Log.Warn($"{readableBuffer.Length} {readPos} {num}");
                 if(num <= 0) {
                     result = "";
                 } else {
+                    //Log.Warn("ReadString " + num);
                     string str = Encoding.UTF8.GetString(readableBuffer, readPos, num);
                     if(moveReadPos && num >= 0) {
                         readPos += num;
