@@ -15,43 +15,33 @@ namespace Netamite.Network.Socket {
         public Action<NetPacket> onPacket;
         public Action onDisconnect;
 
-        private List<byte> packet_buffer = new List<byte>();
+        private List<byte> buffer = new List<byte>();
 
         public bool closing = false;
 
         public void HandleData(byte[] data) {
-            packet_buffer.AddRange(data);
+            buffer.AddRange(data);
 
-            #if PERFORMANCE_WARNING
-            PerformanceError pe = new PerformanceError( errorPrefix: Defines.AMP
-                                                      , errorMessage: "Processing of Packets is taking longer than expected, probably a performance issue. " + TYPE + " processing loop is running for {0}ms."
-                                                      );
-            #endif
+            while(buffer.Count >= 3) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
+                short length = BitConverter.ToInt16(new byte[] { buffer[0], buffer[1] }, 0);
 
-            while(packet_buffer.Count >= 3) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
-                short length = BitConverter.ToInt16(new byte[] { packet_buffer[0], packet_buffer[1] }, 0);
-
-                if(length <= 0) {
-                    packet_buffer.Clear();
+                if(length <= 0 || buffer[2] == 0) {
+                    buffer.Clear();
                     break;
                 }
 
-                if(packet_buffer.Count >= length + 2) {
-                    byte[] packet_data = packet_buffer.GetRange(2, length).ToArray();
+                if(buffer.Count >= length + 2) {
+                    byte[] packet_data = buffer.GetRange(2, length).ToArray();
 
                     using(NetPacket packet = NetPacket.ReadPacket(packet_data)) {
                         if(packet == null) break;
                         HandleData(packet);
                     }
 
-                    if(packet_buffer.Count >= length + 2) packet_buffer.RemoveRange(0, length + 2);
+                    if(buffer.Count >= length + 2) buffer.RemoveRange(0, length + 2);
                 } else {
                     break;
                 }
-
-                #if PERFORMANCE_WARNING
-                pe.HasPerformanceIssue();
-                #endif
             }
         }
 

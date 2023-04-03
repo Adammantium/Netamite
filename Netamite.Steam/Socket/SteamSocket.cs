@@ -3,6 +3,7 @@ using Netamite.Network.Packet;
 using Netamite.Network.Socket;
 using Steamworks;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -10,7 +11,7 @@ namespace Netamite.Steam.Socket {
     public class SteamSocket : NetSocket {
 
         public Action<ulong, NetPacket> onPacketWithId;
-        private Dictionary<ulong, List<byte>> packet_buffer = new Dictionary<ulong, List<byte>>();
+        private ConcurrentDictionary<ulong, List<byte>> packet_buffer = new ConcurrentDictionary<ulong, List<byte>>();
 
         CSteamID target;
         EP2PSend mode;
@@ -66,15 +67,11 @@ namespace Netamite.Steam.Socket {
         }
 
         internal void HandleData(ulong sender, byte[] data) {
-            if(!packet_buffer.ContainsKey(sender)) {
-                packet_buffer.Add(sender, new List<byte>());
+            List<byte> buffer = packet_buffer.GetOrAdd(sender, new List<byte>());
+
+            lock(buffer) { 
+                buffer.AddRange(data);
             }
-
-            List<byte> buffer = packet_buffer[sender];
-
-            if(buffer == null) return;
-
-            buffer.AddRange(data);
 
             while(buffer.Count > 3) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
                 short length = BitConverter.ToInt16(new byte[] { buffer[0], buffer[1] }, 0);
@@ -82,7 +79,9 @@ namespace Netamite.Steam.Socket {
                 //Log.Debug("SOCKET", length + " / " + buffer.Count + " / Packet Id: " + buffer[2]); // REMOVE
 
                 if(length <= 0 || buffer[2] == 0) {
-                    buffer.Clear();
+                    lock(buffer) {
+                        buffer.Clear();
+                    }
                     break;
                 }
 
