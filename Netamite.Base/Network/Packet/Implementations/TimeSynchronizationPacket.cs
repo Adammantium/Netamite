@@ -40,7 +40,7 @@ namespace Netamite.Network.Packet.Implementations {
 
         public override bool ProcessServer(NetamiteServer server, ClientInformation client) {
             if(client.lastTimeSyncStamp == server_timestamp) {
-                server.SendReliableTo(client, this);
+                server.SendTo(client, this);
                 return true;
             } else {
                 Log.Warn(Defines.SERVER, $"{client.ClientName} responded to an outdated Time-Synchronization request. Can be ignored if player just connected.");

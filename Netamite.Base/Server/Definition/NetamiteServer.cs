@@ -123,7 +123,7 @@ namespace Netamite.Server.Definition {
             clientInformation.ConnectionTimestamp = DateTime.Now;
             _clients.TryAdd(clientInformation.ClientId, clientInformation);
 
-            SendReliableTo(clientInformation, new WelcomePacket(clientInformation.ClientId));
+            SendTo(clientInformation, new WelcomePacket(clientInformation.ClientId));
 
             InitializeTimeSync(clientInformation);
 
@@ -132,8 +132,8 @@ namespace Netamite.Server.Definition {
 
         public virtual void ClientLeft(ClientInformation client, string reason = DisconnectReason.CONNECTION_CLOSED) {
             if(_clients.ContainsKey(client.ClientId)) {
-                SendReliableTo(client, new DisconnectPacket(client.ClientId, reason));
-                SendReliableToAllExcept(new DisconnectPacket(client.ClientId, reason), client.ClientId);
+                SendTo(client, new DisconnectPacket(client.ClientId, reason));
+                SendToAllExcept(new DisconnectPacket(client.ClientId, reason), client.ClientId);
                 
                 _clients.TryRemove(client.ClientId, out _);
 
@@ -162,7 +162,7 @@ namespace Netamite.Server.Definition {
 
         public void InvokeStopEvent(bool stopped) {
             if(!stopped) {
-                foreach(ClientInformation client in Clients) SendReliableTo(client, new DisconnectPacket(client.ClientId, DisconnectReason.SERVER_CLOSED));
+                foreach(ClientInformation client in Clients) SendTo(client, new DisconnectPacket(client.ClientId, DisconnectReason.SERVER_CLOSED));
             } else {
                 _IsRunning = false;
                 if(Netamite.MasterServer == this) {
@@ -249,7 +249,7 @@ namespace Netamite.Server.Definition {
         /// <summary>
         /// Initialized a Time-Sync to all clients, to messure the time offset between client and server
         /// </summary>
-        private void InitializeTimeSync() {
+        public void InitializeTimeSync() {
             foreach(ClientInformation client in _clients.Values) {
                 InitializeTimeSync(client);
             }
@@ -259,11 +259,11 @@ namespace Netamite.Server.Definition {
         /// Initialized a Time-Sync to the client, to messure the time offset between client and server
         /// </summary>
         /// <param name="client">The Client to initialize the time sync to</param>
-        private void InitializeTimeSync(ClientInformation client) {
+        public void InitializeTimeSync(ClientInformation client) {
             TimeSynchronizationPacket timeSynchronizationPacket = new TimeSynchronizationPacket(); // UNIX Timestamp will automatically be set
             client.lastTimeSyncStamp = timeSynchronizationPacket.server_timestamp;
 
-            SendReliableTo(client, timeSynchronizationPacket);
+            SendTo(client, timeSynchronizationPacket);
         }
 
         private Thread timeoutCheckerThread = null;
