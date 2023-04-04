@@ -23,9 +23,9 @@ namespace Netamite.Network.Socket {
             buffer.AddRange(data);
 
             while(buffer.Count >= 3) { // At least 3 bytes are needed 2 bytes for length, and 1 byte for the packet type
-                short length = BitConverter.ToInt16(new byte[] { buffer[0], buffer[1] }, 0);
+                ushort length = BitConverter.ToUInt16(new byte[] { buffer[0], buffer[1] }, 0);
 
-                if(length <= 0 || buffer[2] == 0) {
+                if(length == 0 || buffer[2] == 0) {
                     buffer.Clear();
                     break;
                 }

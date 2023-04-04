@@ -1,4 +1,5 @@
 ﻿using Netamite.Datatype;
+using Netamite.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -66,7 +67,7 @@ namespace Netamite.Network {
 
         #region Write to the Buffer
         public void WriteLength() {
-            buffer.InsertRange(0, BitConverter.GetBytes((short) buffer.Count));
+            buffer.InsertRange(0, BitConverter.GetBytes((ushort) buffer.Count));
         }
 
         public void Write(byte value) {
