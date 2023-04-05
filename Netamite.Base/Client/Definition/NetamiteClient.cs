@@ -56,11 +56,6 @@ namespace Netamite.Client.Definition {
             set { _PingDelay = value; }
         }
 
-        internal int unreliableSent = 0;
-        internal int reliableSent = 0;
-        internal int unreliableReceive = 0;
-        internal int reliableReceive = 0;
-
 
         internal long lastServerTimestamp = 0;
         internal long serverTimestampTime = 0;
@@ -109,24 +104,6 @@ namespace Netamite.Client.Definition {
             }
         }
 
-        public int GetBytesSent() {
-            int bytesSent = unreliableSent + reliableSent;
-
-            unreliableSent = 0;
-            reliableSent = 0;
-
-            return bytesSent;
-        }
-
-        public int GetBytesReceive() {
-            int bytesReceive = unreliableReceive + reliableReceive;
-
-            unreliableReceive = 0;
-            reliableReceive = 0;
-
-            return bytesReceive;
-        }
-
         public virtual void Connect(string accessToken = "") {
             if(IsConnected) {
                 Disconnect();
@@ -161,16 +138,16 @@ namespace Netamite.Client.Definition {
                 SendUnreliable(packet);
             }
         }
-        public virtual void SendReliable(NetPacket packet) { reliableSent++; }
-        public virtual void SendUnreliable(NetPacket packet) { unreliableSent++; }
+        public virtual void SendReliable(NetPacket packet) { reliablePacketsSent++; }
+        public virtual void SendUnreliable(NetPacket packet) { unreliablePacketsSent++; }
 
         public void OnReliableReceived(NetPacket packet) {
             DataHandler(packet);
-            reliableReceive++;    
+            reliablePacketsReceive++;    
         }
         public void OnUnreliableReceived(NetPacket packet) {
             DataHandler(packet);
-            unreliableReceive++;
+            unreliablePacketsReceive++;
         }
 
         public virtual void InvokeOnConnect() {

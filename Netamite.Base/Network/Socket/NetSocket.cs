@@ -19,6 +19,23 @@ namespace Netamite.Network.Socket {
 
         public bool closing = false;
 
+        public long bytesSent = 0;
+        public long bytesReceived = 0;
+        public long BytesSent {
+            get { 
+                long val = bytesSent;
+                bytesSent = 0;
+                return val;
+            }
+        }
+        public long BytesReceive {
+            get {
+                long val = bytesReceived;
+                bytesReceived = 0;
+                return val;
+            }
+        }
+
         public void HandleData(byte[] data) {
             buffer.AddRange(data);
 
@@ -38,6 +55,7 @@ namespace Netamite.Network.Socket {
                         HandleData(packet);
                     }
 
+                    bytesReceived += length + 2;
                     if(buffer.Count >= length + 2) buffer.RemoveRange(0, length + 2);
                 } else {
                     break;

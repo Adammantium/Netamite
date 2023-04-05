@@ -138,6 +138,8 @@ namespace Netamite.Network.Socket {
                 if(client != null && stream != null && client.Connected) {
                     byte[] data = packet.GetData(true);
 
+                    bytesSent += data.Length;
+
                     stream.WriteAsync(data, 0, data.Length);
                 }
             } catch(SocketException) {

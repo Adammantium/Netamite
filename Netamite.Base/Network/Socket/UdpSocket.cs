@@ -45,6 +45,9 @@ namespace Netamite.Network.Socket {
             try {
                 if(client != null) {
                     byte[] data = packet.GetData(true);
+
+                    bytesSent += data.Length;
+
                     client.SendAsync(data, data.Length);
                 }
             } catch(Exception e) {

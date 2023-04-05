@@ -114,8 +114,8 @@ namespace Netamite.Server.Definition {
             return null;
         }
 
-        internal static int currentId;
-        public static int NextId { get { return Interlocked.Increment(ref currentId); } }
+        internal int currentId = 0;
+        public int NextId { get { return Interlocked.Increment(ref currentId); } }
         public virtual void ClientJoined(ClientInformation clientInformation) {
             if(clientInformation.ClientId <= 0) {
                 clientInformation.ClientId = Interlocked.Increment(ref currentId);

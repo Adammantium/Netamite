@@ -110,5 +110,20 @@ namespace Netamite.Client.Implementation {
         internal void onUdpPacketReceived(NetPacket p) {
             base.OnUnreliableReceived(p);
         }
+
+        public override long GetBytesSent() {
+            long val = 0;
+            if(tcp != null) { val += tcp.BytesSent; }
+            if(udp != null) { val += udp.BytesSent; }
+
+            return val;
+        }
+        public override long GetBytesReceive() {
+            long val = 0;
+            if(tcp != null) { val += tcp.BytesReceive; }
+            if(udp != null) { val += udp.BytesReceive; }
+
+            return val;
+        }
     }
 }

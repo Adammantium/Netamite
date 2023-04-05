@@ -176,5 +176,20 @@ namespace Netamite.Steam.Client {
             OnConnectionError?.Invoke("Steam P2P Session Connect failed");
             Disconnect();
         }
+
+        public override long GetBytesSent() { 
+            long val = 0;
+            if(reliableSocket != null) { val += reliableSocket.BytesSent; }
+            if(unreliableSocket != null) { val += unreliableSocket.BytesSent; }
+
+            return val;
+        }
+        public override long GetBytesReceive() {
+            long val = 0;
+            if(reliableSocket != null) { val += reliableSocket.BytesReceive; }
+            if(unreliableSocket != null) { val += unreliableSocket.BytesReceive; }
+
+            return val;
+        }
     }
 }

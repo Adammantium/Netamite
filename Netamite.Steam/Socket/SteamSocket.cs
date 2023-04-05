@@ -33,6 +33,7 @@ namespace Netamite.Steam.Socket {
             byte attempts = 50;
             //if(mode == EP2PSend.k_EP2PSendUnreliable || mode == EP2PSend.k_EP2PSendUnreliableNoDelay) attempts = 0;
 
+            bytesSent += data.Length;
             while(!SteamNetworking.SendP2PPacket(target, data, (uint) data.Length, mode, channel)) {
                 attempts--;
                 if(attempts <= 0) break;
@@ -100,6 +101,7 @@ namespace Netamite.Steam.Socket {
 
                     byte[] packet_data = buffer.GetRange(2, length).ToArray();
 
+                    bytesReceived += length + 2;
                     //Log.Debug("SOCKET", "Packet Data " + packet_data.Length); // REMOVE
                     try {
                         using(NetPacket packet = NetPacket.ReadPacket(packet_data)) {

@@ -85,7 +85,9 @@ namespace Netamite.Steam.Integration {
 
         public static void RunCallbacks() {
             if(!_isInitialized) return;
-            SteamAPI.RunCallbacks();
+            try {
+                SteamAPI.RunCallbacks();
+            }catch(System.Exception) { }
         }
 
         public static void Shutdown() {
