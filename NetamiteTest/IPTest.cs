@@ -24,6 +24,8 @@ namespace NetamiteTest {
             };
             server.OnDataReceived += (ci, packet) => {
                 Log.Info(Defines.SERVER, "REC " + ci.ClientName + " " + packet);
+
+                server.SendUnreliableToAll(new MessagePacket("test"));
             };
             server.OnStart += (delay) => {
                 Log.Info(Defines.SERVER, $"Started after {delay}ms.");
@@ -72,8 +74,9 @@ namespace NetamiteTest {
 
                 Thread.Sleep(500);
                 for(int i = 0; i < 10; i++) {
-                    Log.Debug(Defines.CLIENT + " " + id, "UNRELIABLE");
-                    client.SendUnreliable(new MessagePacket("UDP WHOOP"));
+                    //Log.Debug(Defines.CLIENT + " " + id, "UNRELIABLE");
+                    //client.SendUnreliable(new MessagePacket("UDP WHOOP"));
+                    Thread.Sleep(1000);
                 }
                 Thread.Sleep(500);
 

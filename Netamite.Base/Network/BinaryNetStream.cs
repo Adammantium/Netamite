@@ -1,5 +1,4 @@
 ﻿using Netamite.Datatype;
-using Netamite.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,6 +13,9 @@ namespace Netamite.Network {
         private int readPos;
         private bool disposed;
 
+        public byte[] Data {
+            get { return readableBuffer; }
+        }
 
         public BinaryNetStream() {
             readPos = 0;

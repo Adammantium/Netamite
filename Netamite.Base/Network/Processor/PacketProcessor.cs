@@ -23,6 +23,11 @@ namespace Netamite.Network.Processor {
         internal long unreliablePacketsReceive = 0;
         internal long reliablePacketsReceive = 0;
 
+        /// <summary>
+        /// Gets the amount of Packets that has been sent since the last call of
+        /// this function. This will automatically reset the counter.
+        /// </summary>
+        /// <returns>The Packets sent since the last call</returns>
         public long GetPacketsSent() {
             long bytesSent = unreliablePacketsSent + reliablePacketsSent;
 
@@ -32,6 +37,11 @@ namespace Netamite.Network.Processor {
             return bytesSent;
         }
 
+        /// <summary>
+        /// Gets the amount of Packets that has been received since the last call of
+        /// this function. This will automatically reset the counter.
+        /// </summary>
+        /// <returns>The Packets received since the last call</returns>
         public long GetPacketsReceive() {
             long bytesReceive = unreliablePacketsReceive + reliablePacketsReceive;
 
@@ -41,7 +51,18 @@ namespace Netamite.Network.Processor {
             return bytesReceive;
         }
 
+        /// <summary>
+        /// Gets the amount of Bytes that has been sent since the last call of
+        /// this function. This will automatically reset the counter.
+        /// </summary>
+        /// <returns>The Bytes sent since the last call</returns>
         public virtual long GetBytesSent() { return 0; }
+
+        /// <summary>
+        /// Gets the amount of Bytes that has been received since the last call of
+        /// this function. This will automatically reset the counter.
+        /// </summary>
+        /// <returns>The Bytes received since the last call</returns>
         public virtual long GetBytesReceive() { return 0; }
 
     }

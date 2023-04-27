@@ -65,7 +65,7 @@ namespace Netamite.Network.Socket {
                     // Read data
                     byte[] array = client.EndReceive(_result, ref this.endPoint);
 
-                    if(array.Length < 4) {
+                    if(array.Length < 3) {
                         Disconnect();
                         return;
                     }

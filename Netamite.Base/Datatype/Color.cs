@@ -27,6 +27,10 @@
             this.a = a;
         }
 
+        public override string ToString() {
+            return $"{r}; {g}; {b}; {a}";
+        }
+
 #if UNITY
         public static implicit operator Color(UnityEngine.Color n) {
             return new Color(n.r, n.g, n.b);

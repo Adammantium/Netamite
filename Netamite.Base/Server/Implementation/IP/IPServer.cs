@@ -44,7 +44,7 @@ namespace Netamite.Server.Implementation {
 
         internal ConcurrentDictionary<NetSocket, long> waitingForConnectionSockets = new ConcurrentDictionary<NetSocket, long>();
         internal ConcurrentDictionary<int, TcpSocket> tcpConnections = new ConcurrentDictionary<int, TcpSocket>();
-        internal ConcurrentDictionary<int, UdpSocket> udpConnections = new ConcurrentDictionary<int, UdpSocket>();
+        internal ConcurrentDictionary<int, IPEndPoint> udpEndpoints = new ConcurrentDictionary<int, IPEndPoint>();
 
         public IPServer() : base() { }
         public IPServer(short port) : base() {
@@ -110,9 +110,11 @@ namespace Netamite.Server.Implementation {
 
                 // Determine client id by EndPoint
                 bool found = false;
-                foreach(KeyValuePair<int, UdpSocket> entry in udpConnections) {
-                    if(IPEndPoint.Equals(entry.Value.endPoint, clientEndPoint)) {
+                foreach(KeyValuePair<int, IPEndPoint> entry in udpEndpoints) {
+                    if(IPEndPoint.Equals(entry.Value, clientEndPoint)) {
                         NetPacket netPacket = NetPacket.ReadPacket(data, true);
+                        if(!_clients.ContainsKey(entry.Key)) return;
+
                         if(!(netPacket is WelcomePacket)) {
                             ProcessPacket(_clients[entry.Key], netPacket);
                         }
@@ -127,12 +129,10 @@ namespace Netamite.Server.Implementation {
                             int clientId = ((WelcomePacket) packet).ClientId;
 
                             // If no udp is connected, then link up
-                            if(!udpConnections.ContainsKey(clientId) && _clients.ContainsKey(clientId)) {
-                                UdpSocket udpSocket = new UdpSocket(clientEndPoint);
-                                udpConnections.TryAdd(clientId, new UdpSocket(clientEndPoint));
+                            if(!udpEndpoints.ContainsKey(clientId) && _clients.ContainsKey(clientId)) {
+                                udpEndpoints.TryAdd(clientId, clientEndPoint);
 
                                 ClientInformation clientInformation = _clients[clientId];
-                                udpSocket.onPacket = null;
 
                                 Log.Debug(Defines.SERVER, "Linked UDP for " + clientInformation.ClientName + " (" + clientEndPoint + ")");
                                 return;
@@ -181,9 +181,8 @@ namespace Netamite.Server.Implementation {
                 tcpConnections[client.ClientId].Disconnect();
                 tcpConnections.TryRemove(client.ClientId, out _);
             }
-            if(udpConnections.ContainsKey(client.ClientId)) {
-                udpConnections[client.ClientId].Disconnect();
-                udpConnections.TryRemove(client.ClientId, out _);
+            if(udpEndpoints.ContainsKey(client.ClientId)) {
+                udpEndpoints.TryRemove(client.ClientId, out _);
             }
         }
 
@@ -196,8 +195,9 @@ namespace Netamite.Server.Implementation {
 
         // Unreliable
         public override void SendUnreliableTo(ClientInformation client, NetPacket p) {
-            if(udpConnections.ContainsKey(client.ClientId)) {
-                tcpConnections[client.ClientId].QueuePacket(p);
+            if(udpEndpoints.ContainsKey(client.ClientId)) {
+                byte[] data = p.GetData(true);
+                udpListener.Send(data, data.Length, udpEndpoints[client.ClientId]);
             }
         }
 
@@ -211,9 +211,6 @@ namespace Netamite.Server.Implementation {
 
             foreach(TcpSocket tcpSocket in tcpConnections.Values) {
                 tcpSocket?.Disconnect();
-            }
-            foreach(UdpSocket udpSocket in udpConnections.Values) {
-                udpSocket?.Disconnect();
             }
 
             InvokeStopEvent(true);

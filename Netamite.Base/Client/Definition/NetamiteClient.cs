@@ -1,6 +1,5 @@
 ﻿using Netamite.Datatype;
 using Netamite.Helper;
-using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;

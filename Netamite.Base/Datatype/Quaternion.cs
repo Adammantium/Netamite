@@ -22,6 +22,12 @@ namespace Netamite.Datatype {
             this.w = w;
         }
 
+        public override string ToString() {
+            return $"({x}; {y}; {z}; {w})";
+        }
+
+
+
         /// <summary>
         /// Used when compressing float values, where the decimal portion of the floating point value
         /// is multiplied by this number prior to storing the result in an Int16. Doing this allows 

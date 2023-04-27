@@ -53,6 +53,23 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Client\Implementation\IPClient.cs" />
+    <Compile Include="Converter\DataConverter.cs" />
+    <Compile Include="Converter\DataConverterInterface.cs" />
+    <Compile Include="Converter\Implementation\CharConverter.cs" />
+    <Compile Include="Converter\Implementation\ByteConverter.cs" />
+    <Compile Include="Converter\Implementation\DoubleConverter.cs" />
+    <Compile Include="Converter\Implementation\ColorConverter.cs" />
+    <Compile Include="Converter\Implementation\Vector3Converter.cs" />
+    <Compile Include="Converter\Implementation\QuaternionConverter.cs" />
+    <Compile Include="Converter\Implementation\ULongConverter.cs" />
+    <Compile Include="Converter\Implementation\LongConverter.cs" />
+    <Compile Include="Converter\Implementation\UIntConverter.cs" />
+    <Compile Include="Converter\Implementation\StringConverter.cs" />
+    <Compile Include="Converter\Implementation\UShortConverter.cs" />
+    <Compile Include="Converter\Implementation\ShortConverter.cs" />
+    <Compile Include="Converter\Implementation\IntConverter.cs" />
+    <Compile Include="Converter\Implementation\FloatConverter.cs" />
+    <Compile Include="Converter\MissingDataConverterException.cs" />
     <Compile Include="Datatype\Color.cs" />
     <Compile Include="Datatype\DisconnectReason.cs" />
     <Compile Include="Datatype\Half.cs" />
