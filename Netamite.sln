@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Steam", "Netamite.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Base", "Netamite.Base\Netamite.Base.csproj", "{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Unity", "Netamite.Unity\Netamite.Unity.csproj", "{D94C9D1D-F2D4-43BA-9B03-3933CA92ABC9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C770E0E7-28DC-4FFC-9E11-E446C4BF01C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D94C9D1D-F2D4-43BA-9B03-3933CA92ABC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D94C9D1D-F2D4-43BA-9B03-3933CA92ABC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D94C9D1D-F2D4-43BA-9B03-3933CA92ABC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D94C9D1D-F2D4-43BA-9B03-3933CA92ABC9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

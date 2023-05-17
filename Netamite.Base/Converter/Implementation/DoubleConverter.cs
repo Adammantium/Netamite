@@ -2,7 +2,7 @@
 
 namespace Netamite.Converter.Implementation {
     public class DoubleConverter : DataConverterInterface<double> {
-        public static new double FromData(byte[] value, out int bytesRead, int startIndex = 0, bool lowPrecision = false) {
+        public static new double FromBytes(byte[] value, out int bytesRead, int startIndex = 0, bool lowPrecision = false) {
             double val;
             if(lowPrecision) {
                 float result = BitConverter.ToSingle(value, startIndex);
@@ -16,7 +16,7 @@ namespace Netamite.Converter.Implementation {
             return val;
         }
 
-        public static new byte[] GetData(double value, bool lowPrecision = false) {
+        public static new byte[] GetBytes(double value, bool lowPrecision = false) {
             if(lowPrecision) {
                 return BitConverter.GetBytes((float) value);
             } else {

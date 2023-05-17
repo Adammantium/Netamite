@@ -3,7 +3,7 @@ using System;
 
 namespace Netamite.Converter.Implementation {
     public class FloatConverter : DataConverterInterface<float> {
-        public static new float FromData(byte[] value, out int bytesRead, int startIndex = 0, bool lowPrecision = false) {
+        public static new float FromBytes(byte[] value, out int bytesRead, int startIndex = 0, bool lowPrecision = false) {
             bytesRead = 0;
             float val;
             if(lowPrecision) {
@@ -18,7 +18,7 @@ namespace Netamite.Converter.Implementation {
             return val;
         }
 
-        public static new byte[] GetData(float value, bool lowPrecision = false) {
+        public static new byte[] GetBytes(float value, bool lowPrecision = false) {
             if(lowPrecision) {
                 return Half.GetBytes(new Half(value));
             } else {

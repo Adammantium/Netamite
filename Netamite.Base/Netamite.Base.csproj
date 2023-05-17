@@ -47,14 +47,12 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>G:\Steam\steamapps\common\Blade &amp; Sorcery\BladeAndSorcery_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Client\Implementation\IPClient.cs" />
     <Compile Include="Converter\DataConverter.cs" />
     <Compile Include="Converter\DataConverterInterface.cs" />
+    <Compile Include="Converter\Implementation\BooleanConverter.cs" />
     <Compile Include="Converter\Implementation\CharConverter.cs" />
     <Compile Include="Converter\Implementation\ByteConverter.cs" />
     <Compile Include="Converter\Implementation\DoubleConverter.cs" />

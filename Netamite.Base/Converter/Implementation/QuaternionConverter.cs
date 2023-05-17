@@ -3,8 +3,8 @@ using System;
 using System.Collections.Generic;
 
 namespace Netamite.Converter.Implementation {
-    internal class QuaternionConverter : DataConverterInterface<Quaternion> {
-        public static new Quaternion FromData(byte[] value, out int bytesRead, int startIndex = 0, bool lowPrecision = false) {
+    public class QuaternionConverter : DataConverterInterface<Quaternion> {
+        public static new Quaternion FromBytes(byte[] value, out int bytesRead, int startIndex = 0, bool lowPrecision = false) {
             Quaternion result;
             if(lowPrecision) {
                 byte maxIndex = value[startIndex];
@@ -13,19 +13,19 @@ namespace Netamite.Converter.Implementation {
                     bytesRead = 1;
                 } else {
                     short[] data = new short[3] {
-                        (short) DataConverter.FromData(typeof(short), value, startIndex + 1),
-                        (short) DataConverter.FromData(typeof(short), value, startIndex + 3),
-                        (short) DataConverter.FromData(typeof(short), value, startIndex + 5)
+                        ShortConverter.FromBytes(value, out _, startIndex + 1),
+                        ShortConverter.FromBytes(value, out _, startIndex + 3),
+                        ShortConverter.FromBytes(value, out _, startIndex + 5)
                     };
                     result = Quaternion.Decompress(maxIndex, data);
                     bytesRead = 7;
                 }
             } else {
                 result = new Quaternion(
-                    (float) DataConverter.FromData(typeof(float), value, startIndex), 
-                    (float) DataConverter.FromData(typeof(float), value, startIndex + 4),
-                    (float) DataConverter.FromData(typeof(float), value, startIndex + 8),
-                    (float) DataConverter.FromData(typeof(float), value, startIndex + 12)
+                    FloatConverter.FromBytes(value, out _, startIndex),
+                    FloatConverter.FromBytes(value, out _, startIndex + 4),
+                    FloatConverter.FromBytes(value, out _, startIndex + 8),
+                    FloatConverter.FromBytes(value, out _, startIndex + 12)
                 );
                 bytesRead = 16;
             }
@@ -33,15 +33,15 @@ namespace Netamite.Converter.Implementation {
             return result;
         }
 
-        public static new byte[] GetData(Quaternion value, bool lowPrecision = false) {
+        public static new byte[] GetBytes(Quaternion value, bool lowPrecision = false) {
             if(lowPrecision) {
                 return value.Compress();
             } else {
                 List<byte> bytes = new List<byte>();
-                bytes.AddRange(FloatConverter.GetData(value.x));
-                bytes.AddRange(FloatConverter.GetData(value.y));
-                bytes.AddRange(FloatConverter.GetData(value.z));
-                bytes.AddRange(FloatConverter.GetData(value.w));
+                bytes.AddRange(FloatConverter.GetBytes(value.x));
+                bytes.AddRange(FloatConverter.GetBytes(value.y));
+                bytes.AddRange(FloatConverter.GetBytes(value.z));
+                bytes.AddRange(FloatConverter.GetBytes(value.w));
                 return bytes.ToArray();
             }
         }

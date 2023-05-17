@@ -30,16 +30,5 @@
         public override string ToString() {
             return $"{r}; {g}; {b}; {a}";
         }
-
-#if UNITY
-        public static implicit operator Color(UnityEngine.Color n) {
-            return new Color(n.r, n.g, n.b);
-        }
-
-
-        public static explicit operator UnityEngine.Color(Color o) {
-            return new UnityEngine.Color(o.r, o.g, o.b);
-        }
-#endif
     }
 }

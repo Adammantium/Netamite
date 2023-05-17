@@ -9,14 +9,14 @@ namespace NetamiteTest {
             Console.WriteLine("\n==> Value Converter");
             ValueConverterText.DoTest();
 
-            //Console.WriteLine("\n==> TCP/UDP");
-            //IPTest.DoTest();
-            //
-            //Console.WriteLine("\n==> STEAM");
-            //SteamTest.DoTest();
-            //
-            //Console.WriteLine("\n==> TIMEOUT TEST");
-            //TimeoutTest.DoTest();
+            Console.WriteLine("\n==> TCP/UDP");
+            IPTest.DoTest();
+            
+            Console.WriteLine("\n==> STEAM");
+            SteamTest.DoTest();
+            
+            Console.WriteLine("\n==> TIMEOUT TEST");
+            TimeoutTest.DoTest();
             
             Console.WriteLine("");
             Console.WriteLine(">>>>> TEST DONE <<<<<<");

@@ -5,7 +5,15 @@ using System;
 namespace NetamiteTest {
     internal class ValueConverterText {
 
+        private enum TestEnum : byte {
+            ONE,
+            TWO,
+            THREE
+        }
+
         public static void DoTest() {
+            TestConvert(TestEnum.TWO);
+            TestConvert(true);
             TestConvert(1f);
             TestConvert(1.1);
             TestConvert((byte)   10);
@@ -30,20 +38,20 @@ namespace NetamiteTest {
             Console.WriteLine("\tIN: " + value);
 
             try {
-                byte[] compress_data = DataConverter.GetData(value, true);
+                byte[] compress_data = DataConverter.GetBytes(value, true);
                 Console.Write($"\tCOMP ({compress_data.Length}): ");
                 foreach(byte b in compress_data)
                     Console.Write(Convert.ToString(b, 2).PadLeft(8, '0') + " ");
                 Console.WriteLine();
-                Console.WriteLine("\tOUT: " + DataConverter.FromData(value.GetType(), compress_data, 0, true));
+                Console.WriteLine("\tOUT: " + DataConverter.FromBytes(value.GetType(), compress_data, 0, true));
 
 
-                byte[] full_data = DataConverter.GetData(value, false);
+                byte[] full_data = DataConverter.GetBytes(value, false);
                 Console.Write($"\tFULL ({full_data.Length}): ");
                 foreach(byte b in full_data)
                     Console.Write(Convert.ToString(b, 2).PadLeft(8, '0') + " ");
                 Console.WriteLine();
-                Console.WriteLine("\tOUT: " + DataConverter.FromData(value.GetType(), full_data, 0, false));
+                Console.WriteLine("\tOUT: " + DataConverter.FromBytes(value.GetType(), full_data, 0, false));
 
 
                 Console.WriteLine();

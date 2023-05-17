@@ -24,16 +24,5 @@
         public static Vector3 operator /(Vector3 a, float d) {
             return new Vector3(a.x / d, a.y / d, a.z / d);
         }
-
-#if UNITY
-        public static implicit operator Vector3(UnityEngine.Vector3 n) {
-            return new Vector3(n.x, n.y, n.z);
-        }
-
-
-        public static explicit operator UnityEngine.Vector3(Vector3 o) {
-            return new UnityEngine.Vector3(o.x, o.y, o.z);
-        }
-#endif
     }
 }

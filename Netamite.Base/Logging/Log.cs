@@ -122,42 +122,26 @@ namespace Netamite.Logging {
             switch(type) {
                 case Type.DEBUG:
                     #if DEBUG_MESSAGES
-                    #if UNITY
-                    if(loggerType == LoggerType.UNITY)
-                        UnityEngine.Debug.Log(message);
-                    else if(loggerType == LoggerType.CONSOLE)
-                    #endif
+                    if(loggerType == LoggerType.CONSOLE)
                         ConsoleLine(message);
                     #endif
 
                     break;
 
                 case Type.INFO:
-                    #if UNITY
-                    if(loggerType == LoggerType.UNITY)
-                        UnityEngine.Debug.Log(message);
-                    else if(loggerType == LoggerType.CONSOLE)
-                    #endif
+                    if(loggerType == LoggerType.CONSOLE)
                         ConsoleLine(message);
 
                     break;
 
                 case Type.WARNING:
-                    #if UNITY
-                    if(loggerType == LoggerType.UNITY)
-                        UnityEngine.Debug.LogWarning(message);
-                    else if(loggerType == LoggerType.CONSOLE)
-                    #endif
+                    if(loggerType == LoggerType.CONSOLE)
                         ConsoleLine($"<color=#FFFF00>{message}</color>");
 
                     break;
 
                 case Type.ERROR:
-                    #if UNITY
-                    if(loggerType == LoggerType.UNITY)
-                        UnityEngine.Debug.LogError(message);
-                    else if(loggerType == LoggerType.CONSOLE)
-                    #endif
+                    if(loggerType == LoggerType.CONSOLE)
                         ConsoleLine($"<color=#FF0000>{message}</color>");
 
                     break;

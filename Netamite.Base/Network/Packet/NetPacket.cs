@@ -58,7 +58,7 @@ namespace Netamite.Network.Packet {
         public static NetPacket ReadPacket(byte[] data, bool hasLength = false) {
             BinaryNetStream stream = new BinaryNetStream(data);
 
-            if(hasLength) stream.ReadUShort(); // Flush away the length
+            if(hasLength) stream.Read(typeof(ushort)); // Flush away the length
             byte type = stream.ReadByte(false);
             
             Type implementationType = GetPacketImplementation(type);
@@ -131,7 +131,7 @@ namespace Netamite.Network.Packet {
         public void SetData(byte[] data, bool hasLength = false) {
             BinaryNetStream stream = new BinaryNetStream(data);
 
-            if(hasLength) stream.ReadUShort(); // Flush away the length
+            if(hasLength) stream.Read(typeof(ushort)); // Flush away the length
 
             byte dataPacketType = stream.ReadByte();
             byte myPacketType   = getPacketType();
