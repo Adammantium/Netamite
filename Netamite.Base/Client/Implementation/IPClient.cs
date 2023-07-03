@@ -36,6 +36,7 @@ namespace Netamite.Client.Implementation {
             if(!tcp.client.Connected) {
                 _STATE = "FAILED";
                 Disconnect();
+                OnConnectionError?.Invoke("Connection failed.");
                 return;
             } else {
                 EstablishConnection();

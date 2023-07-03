@@ -1,10 +1,5 @@
-﻿using Netamite.Converter.Implementation;
-using Netamite.Converter;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Netamite.Converter;
+using Netamite.Converter.Implementation;
 using UnityEngine;
 
 namespace Netamite.Unity.Converters {

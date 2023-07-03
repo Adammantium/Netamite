@@ -1,5 +1,4 @@
 ﻿using Netamite.Datatype;
-using System;
 using System.Collections.Generic;
 
 namespace Netamite.Converter.Implementation {
