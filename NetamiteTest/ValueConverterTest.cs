@@ -3,7 +3,7 @@ using Netamite.Datatype;
 using System;
 
 namespace NetamiteTest {
-    internal class ValueConverterText {
+    internal class ValueConverterTest {
 
         private enum TestEnum : byte {
             ONE,
@@ -27,8 +27,9 @@ namespace NetamiteTest {
             TestConvert('T');
             TestConvert("Test");
 
-            TestConvert(new Quaternion(0.002f, 0.533f, -0.178f, -0.827f));
             TestConvert(new Vector3(10.5f, 13.6f, -10.1f));
+            TestConvert(new Quaternion(0.002f, 0.533f, -0.178f, -0.827f));
+
             TestConvert(Color.yellow);
         }
 

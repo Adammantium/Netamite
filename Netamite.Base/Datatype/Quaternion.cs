@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Netamite.Datatype {
     [Serializable]
     public class Quaternion {
         public float x, y, z, w;
 
+        private static float Rad2Deg = (float) (180 / Math.PI);
+        private static float Deg2Rad = (float) (Math.PI / 180);
 
         public static Quaternion identity {
             get { return new Quaternion(0f, 0f, 0f, 1f); }
@@ -13,6 +16,10 @@ namespace Netamite.Datatype {
 
         public float this[int i] {
             get { return (i == 0 ? x : (i == 1 ? y : (i == 2 ? z : w))); }
+        }
+
+        public Quaternion() {
+
         }
 
         public Quaternion(float x, float y, float z, float w) {
@@ -24,6 +31,13 @@ namespace Netamite.Datatype {
 
         public override string ToString() {
             return $"({x}; {y}; {z}; {w})";
+        }
+
+        public static bool operator ==(Quaternion a, Quaternion b) {
+            return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+        }
+        public static bool operator !=(Quaternion a, Quaternion b) {
+            return !(a == b);
         }
 
 
@@ -140,5 +154,68 @@ namespace Netamite.Datatype {
 
             return new Quaternion(a, b, c, d);
         }
+
+        /*
+        public static Quaternion FromEuler(Vector3 vec) {
+            return FromEuler(vec.y, vec.x, vec.z);
+        }
+
+        public static Quaternion FromEuler(float yaw, float pitch, float roll) {
+            yaw   *= Deg2Rad;
+            pitch *= Deg2Rad;
+            roll  *= Deg2Rad;
+            float rollOver2 = roll * 0.5f;
+            float sinRollOver2 = (float)Math.Sin((double)rollOver2);
+            float cosRollOver2 = (float)Math.Cos((double)rollOver2);
+            float pitchOver2 = pitch * 0.5f;
+            float sinPitchOver2 = (float)Math.Sin((double)pitchOver2);
+            float cosPitchOver2 = (float)Math.Cos((double)pitchOver2);
+            float yawOver2 = yaw * 0.5f;
+            float sinYawOver2 = (float)Math.Sin((double)yawOver2);
+            float cosYawOver2 = (float)Math.Cos((double)yawOver2);
+            Quaternion result = new Quaternion();
+            result.w = cosYawOver2 * cosPitchOver2 * cosRollOver2 + sinYawOver2 * sinPitchOver2 * sinRollOver2;
+            result.x = cosYawOver2 * sinPitchOver2 * cosRollOver2 + sinYawOver2 * cosPitchOver2 * sinRollOver2;
+            result.y = sinYawOver2 * cosPitchOver2 * cosRollOver2 - cosYawOver2 * sinPitchOver2 * sinRollOver2;
+            result.z = cosYawOver2 * cosPitchOver2 * sinRollOver2 - sinYawOver2 * sinPitchOver2 * cosRollOver2;
+
+            return result;
+        }
+
+
+        public Vector3 ToEuler() {
+            float sqw = w * w;
+            float sqx = x * x;
+            float sqy = y * y;
+            float sqz = z * z;
+            float unit = sqx + sqy + sqz + sqw; // if normalised is one, otherwise is correction factor
+            float test = x * w - y * z;
+            Vector3 v = new Vector3();
+
+            if(test > 0.4995f * unit) { // singularity at north pole
+                v.y = (float) (2f * Math.Atan2(y, x));
+                v.x = (float) (Math.PI / 2);
+                v.z = 0;
+                (v * Rad2Deg).NormalizeAngles();
+                return v;
+            }
+
+            if(test < -0.4995f * unit) { // singularity at south pole
+                v.y = (float) (-2f * Math.Atan2(y, x));
+                v.x = (float) (-Math.PI / 2);
+                v.z = 0;
+                (v * Rad2Deg).NormalizeAngles();
+                return v;
+            }
+
+            Quaternion q = new Quaternion(w, z, x, y);
+            v.y = (float)Math.Atan2(2f * q.x * q.w + 2f * q.y * q.z, 1 - 2f * (q.z * q.z + q.w * q.w));     // Yaw
+            v.x = (float)Math.Asin(2f * (q.x * q.z - q.w * q.y));                                           // Pitch
+            v.z = (float)Math.Atan2(2f * q.x * q.y + 2f * q.z * q.w, 1 - 2f * (q.y * q.y + q.z * q.z));     // Roll
+
+            (v * Rad2Deg).NormalizeAngles();
+            return v;
+        }
+        */
     }
 }

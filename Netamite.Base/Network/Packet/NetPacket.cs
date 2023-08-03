@@ -156,7 +156,7 @@ namespace Netamite.Network.Packet {
                     try {
                         if(t.IsArray) {
                             object[] val = stream.ReadArray(t.GetElementType(), (atts[0] as SyncedVar).LowPrecision);
-                        
+                            
                             if(val.Length > 0) {
                                 Array filledArray = Array.CreateInstance(val[0].GetType(), val.Length);
                                 Array.Copy(val, filledArray, val.Length);

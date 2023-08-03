@@ -89,6 +89,7 @@ namespace Netamite.Server.Definition {
 
 
         public NetamiteServer() {
+            Netamite.Initialize();
             NetPacket.BuildPacketImplementationCache();
             if(Netamite.MasterServer == null) {
                 Netamite.MasterServer = this;

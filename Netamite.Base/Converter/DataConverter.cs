@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 
@@ -49,18 +50,20 @@ namespace Netamite.Converter {
             }
 
             foreach(Assembly assembly in AppDomain.CurrentDomain.GetAssemblies()) {
-                foreach(Type t in assembly.GetTypes()) {
-                    if(t.BaseType == null) continue;
-                    if(!t.BaseType.IsGenericType) continue;
-                    if(t.BaseType.GetGenericTypeDefinition() == typeof(DataConverterInterface<>)) {
-                        foreach(Type arg in t.BaseType.GetGenericArguments()) {
-                            if(arg == to_find) {
-                                converters.TryAdd(to_find, t);
-                                return t;
+                try {
+                    foreach(Type t in assembly.GetTypes()) {
+                        if(t.BaseType == null) continue;
+                        if(!t.BaseType.IsGenericType) continue;
+                        if(t.BaseType.GetGenericTypeDefinition() == typeof(DataConverterInterface<>)) {
+                            foreach(Type arg in t.BaseType.GetGenericArguments()) {
+                                if(arg == to_find) {
+                                    converters.TryAdd(to_find, t);
+                                    return t;
+                                }
                             }
                         }
                     }
-                }
+                }catch(ReflectionTypeLoadException) { } // Ignore it if a assembly cant be fully checked
             }
             return null;
         }

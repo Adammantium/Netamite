@@ -7,7 +7,7 @@ namespace NetamiteTest {
 
 
             Console.WriteLine("\n==> Value Converter");
-            ValueConverterText.DoTest();
+            ValueConverterTest.DoTest();
 
             Console.WriteLine("\n==> TCP/UDP");
             IPTest.DoTest();

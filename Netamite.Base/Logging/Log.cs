@@ -163,6 +163,7 @@ namespace Netamite.Logging {
             lock(messageQueue) {
                 while(messageQueue.TryDequeue(out message)) {
                     List<ConsoleColor> colors = new List<ConsoleColor>();
+                    if(message == null) message = "null";
                     char[] chars = message.ToCharArray();
 
                     for(int i = 0; i < chars.Length; ) {

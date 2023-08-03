@@ -97,6 +97,7 @@ namespace Netamite.Client.Definition {
         public Action<string> OnWarning;
 
         public NetamiteClient() {
+            Netamite.Initialize();
             NetPacket.BuildPacketImplementationCache();
             if(Netamite.MasterClient == null) {
                 Netamite.MasterClient = this;
