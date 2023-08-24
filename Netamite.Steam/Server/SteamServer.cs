@@ -6,6 +6,7 @@ using Netamite.Steam.Datatype;
 using Netamite.Steam.Integration;
 using Netamite.Steam.Socket;
 using Steamworks;
+using System;
 using System.Collections.Generic;
 using SteamClient = Netamite.Steam.Client.SteamClient;
 
@@ -72,7 +73,7 @@ namespace Netamite.Steam.Server {
         internal void CheckForNewMembers() {
             foreach(LobbyMember member in currentLobby.Members) {
                 if(!userIdToSteamMapping.ContainsValue((ulong)member.SteamId)) {
-                    ClientInformation clientInformation = new ClientInformation();
+                    ClientInformation clientInformation = (ClientInformation) Activator.CreateInstance(Netamite.GetClientinfoType());
                     clientInformation.ClientName = member.Name;
 
                     clientInformation.ClientId = NextId;

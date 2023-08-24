@@ -306,5 +306,10 @@ namespace Netamite.Server.Definition {
                 Thread.Sleep(60000);
             }
         }
+
+        public ClientInformation GetClientById(int id) {
+            if(_clients.ContainsKey(id)) return _clients[id];
+            return null;
+        }
     }
 }

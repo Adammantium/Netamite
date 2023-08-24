@@ -153,7 +153,7 @@ namespace Netamite.Server.Implementation {
                 if(error == null) {
                     if(waitingForConnectionSockets.ContainsKey(socket)) waitingForConnectionSockets.TryRemove(socket, out _);
                     
-                    ClientInformation clientInformation = new ClientInformation();
+                    ClientInformation clientInformation = (ClientInformation) Activator.CreateInstance(Netamite.GetClientinfoType());
                     clientInformation.ClientName = ecp.name;
 
                     clientInformation.ClientId = NextId;
