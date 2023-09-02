@@ -9,6 +9,8 @@ namespace Netamite.Server.Data {
         public DateTime ConnectionTimestamp;
 
         internal long lastTimeSyncStamp;
+        internal long nextTimeSyncStamp;
+        internal byte secondDelayBetweenTimeSync = 0;
 
         internal long lastPacketTimestamp;
 

@@ -1,5 +1,6 @@
 ﻿using Netamite.Datatype;
 using Netamite.Helper;
+using Netamite.Logging;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Processor;
@@ -252,6 +253,8 @@ namespace Netamite.Server.Definition {
         /// </summary>
         public void InitializeTimeSync() {
             foreach(ClientInformation client in _clients.Values) {
+                if(client.nextTimeSyncStamp > TimeHelper.Millis) return;
+
                 InitializeTimeSync(client);
             }
         }
@@ -263,6 +266,15 @@ namespace Netamite.Server.Definition {
         public void InitializeTimeSync(ClientInformation client) {
             TimeSynchronizationPacket timeSynchronizationPacket = new TimeSynchronizationPacket(); // UNIX Timestamp will automatically be set
             client.lastTimeSyncStamp = timeSynchronizationPacket.server_timestamp;
+            client.nextTimeSyncStamp = TimeHelper.Millis + (client.secondDelayBetweenTimeSync * 1000);
+
+            if(client.secondDelayBetweenTimeSync < 10) {
+                client.secondDelayBetweenTimeSync++;
+            }else if(client.secondDelayBetweenTimeSync < 60) {
+                client.secondDelayBetweenTimeSync += 10;
+            }
+
+            Log.Debug("Pinging: " + client.ClientName + " " + client.secondDelayBetweenTimeSync);
 
             SendTo(client, timeSynchronizationPacket);
         }
@@ -303,7 +315,7 @@ namespace Netamite.Server.Definition {
         private void TimeSyncThread() {
             while(!additionalServerThreadsCancellation.IsCancellationRequested) {
                 InitializeTimeSync();
-                Thread.Sleep(60000);
+                Thread.Sleep(1000);
             }
         }
 
