@@ -266,15 +266,13 @@ namespace Netamite.Server.Definition {
         public void InitializeTimeSync(ClientInformation client) {
             TimeSynchronizationPacket timeSynchronizationPacket = new TimeSynchronizationPacket(); // UNIX Timestamp will automatically be set
             client.lastTimeSyncStamp = timeSynchronizationPacket.server_timestamp;
-            client.nextTimeSyncStamp = TimeHelper.Millis + (client.secondDelayBetweenTimeSync * 1000);
 
             if(client.secondDelayBetweenTimeSync < 10) {
                 client.secondDelayBetweenTimeSync++;
             }else if(client.secondDelayBetweenTimeSync < 60) {
                 client.secondDelayBetweenTimeSync += 10;
             }
-
-            Log.Debug("Pinging: " + client.ClientName + " " + client.secondDelayBetweenTimeSync);
+            client.nextTimeSyncStamp = TimeHelper.Millis + (client.secondDelayBetweenTimeSync * 1000);
 
             SendTo(client, timeSynchronizationPacket);
         }
