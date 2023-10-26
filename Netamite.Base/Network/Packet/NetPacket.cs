@@ -1,5 +1,6 @@
 ﻿using Netamite.Client.Definition;
 using Netamite.Extension;
+using Netamite.Logging;
 using Netamite.Network.Packet.Attributes;
 using Netamite.Network.Packet.Exceptions;
 using Netamite.Server.Data;
@@ -67,8 +68,13 @@ namespace Netamite.Network.Packet {
             object packetInstance = Activator.CreateInstance(implementationType);
             if(packetInstance is NetPacket) {
                 NetPacket np = (NetPacket) packetInstance;
-                np.SetData(data, hasLength);
-                return np;
+
+                try {
+                    np.SetData(data, hasLength);
+                    return np;
+                }catch(Exception ex) {
+                    Log.Err(ex);
+                }
             }
 
             return null;

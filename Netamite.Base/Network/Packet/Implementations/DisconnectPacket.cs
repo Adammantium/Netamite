@@ -1,4 +1,5 @@
 ﻿using Netamite.Client.Definition;
+using Netamite.Logging;
 using Netamite.Network.Packet.Attributes;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;

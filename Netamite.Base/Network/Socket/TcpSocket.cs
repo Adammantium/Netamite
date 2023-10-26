@@ -106,7 +106,12 @@ namespace Netamite.Network.Socket {
         }
 
         public override void AwaitData() {
-            stream.BeginRead(buffer, 0, transmission_bits, ReceiveCallback, null);
+            try {
+                stream.BeginRead(buffer, 0, transmission_bits, ReceiveCallback, null);
+            }catch(SocketException e) {
+                Disconnect();
+                Log.Err($"Error receiving TCP data: {e}");
+            }
         }
 
         private void ReceiveCallback(IAsyncResult _result) {

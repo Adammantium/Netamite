@@ -6,9 +6,9 @@ namespace NetamiteTest {
     internal class ValueConverterTest {
 
         private enum TestEnum : byte {
-            ONE,
-            TWO,
-            THREE
+            ONE = 1,
+            TWO = 2,
+            THREE = 3
         }
 
         public static void DoTest() {
