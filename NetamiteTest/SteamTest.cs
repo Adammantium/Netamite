@@ -15,6 +15,12 @@ namespace NetamiteTest {
     internal class SteamTest {
 
         public static void DoTest() {
+            SteamIntegration.OnError += (exception) => {
+                Log.Err(exception);
+            };
+            SteamIntegration.OnInitialized += () => {
+                Log.Info("Initalized Steam");
+            };
             SteamIntegration.Initialize(480);
 
             bool joined = false;
@@ -36,17 +42,25 @@ namespace NetamiteTest {
                 server.OnDataReceived += (ci, packet) => {
                     Log.Info(Defines.SERVER, "REC " + ci.ClientName + " " + packet);
                 };
+                server.OnStartupError += (message) => {
+                    Log.Err(message);
+                };
+                bool done = false;
                 server.OnStart += (delay) => {
                     Log.Info(Defines.SERVER, $"Started after {delay}ms.");
+                    done = true;
                 };
                 server.OnStop += () => {
                     Log.Info(Defines.SERVER, "Server closed");
                     SteamIntegration.Shutdown();
+                    done = true;
                 };
                 server.ConnectToken = "";
                 server.Start();
 
-                Thread.Sleep(2500);
+                while(!done) {
+                    Thread.Sleep(1000);
+                }
 
                 BeginConnecting((ulong)((SteamServer)server).currentLobby.LobbyId);
             }

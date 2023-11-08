@@ -46,10 +46,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConsoleMenu.cs" />
     <Compile Include="IPTest.cs" />
     <Compile Include="NetamiteTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SteamTest.cs" />
+    <Compile Include="Ticking\TickingEntityTest.cs" />
+    <Compile Include="Ticking\TickingTest.cs" />
     <Compile Include="TimeoutTest.cs" />
     <Compile Include="ValueConverterTest.cs" />
   </ItemGroup>
@@ -61,6 +64,10 @@
     <ProjectReference Include="..\Netamite.Steam\Netamite.Steam.csproj">
       <Project>{9b9476b6-850a-40f0-8392-005dac655378}</Project>
       <Name>Netamite.Steam</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Netamite.TickingEngine\Netamite.TickingEngine.csproj">
+      <Project>{fa84fadc-c40a-4fb2-96a8-de132618cb45}</Project>
+      <Name>Netamite.TickingEngine</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

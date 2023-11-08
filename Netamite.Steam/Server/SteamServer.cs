@@ -134,7 +134,7 @@ namespace Netamite.Steam.Server {
 
                 base.InvokeStartEvent(true);
             } else {
-                OnStartupError?.Invoke("Steam Lobby creation failed!");
+                OnStartupError?.Invoke("Steam Lobby creation failed! " + req.m_eResult);
             }
         }
 
