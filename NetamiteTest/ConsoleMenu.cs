@@ -56,10 +56,14 @@ namespace NetamiteTest {
 
             int length = options.Aggregate("", (max, cur) => max.Length > cur.Name.Length ? max : cur.Name).Length;
 
-            Console.WriteLine("╔" + "".PadRight(length + 6, '═') + "╗");
+            int offset_left = (Console.BufferWidth - length - 6) / 2;
+
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine("".PadLeft(offset_left) + "╔" + "".PadRight(length + 6, '═') + "╗");
 
             foreach(Option option in options) {
-                Console.Write("║ ");
+                Console.Write("".PadLeft(offset_left) + "║ ");
 
                 if(option == options[index]) {
                     Console.ForegroundColor = ConsoleColor.Green;
@@ -77,7 +81,7 @@ namespace NetamiteTest {
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.WriteLine("║");
             }
-            Console.WriteLine("╚" + "".PadRight(length + 6, '═') + "╝");
+            Console.WriteLine("".PadLeft(offset_left) + "╚" + "".PadRight(length + 6, '═') + "╝");
         }
 
         public class Option {

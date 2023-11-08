@@ -1,4 +1,5 @@
 ﻿using Netamite.TickingEngine;
+using Netamite.TickingEngine.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,9 +10,22 @@ namespace NetamiteTest.Ticking {
     internal class TickingTest {
 
         public static void DoTest() {
-            TickingEngine tickingEngine = new TickingEngine(new Netamite.TickingEngine.Data.TickingEngineConfiguration());
+            TickingEngineConfiguration config = new TickingEngineConfiguration { 
+                                                    TickRate = 2
+                                                };
+
+            TickingEngine tickingEngine = new TickingEngine(config);
 
             TickingEntityTest tickingEntity = new TickingEntityTest();
+            tickingEntity.tickingRate = TickingRate.FULL;
+            tickingEntity.Start(tickingEngine);
+
+            tickingEntity = new TickingEntityTest();
+            tickingEntity.tickingRate = TickingRate.HALF;
+            tickingEntity.Start(tickingEngine);
+
+            tickingEntity = new TickingEntityTest();
+            tickingEntity.tickingRate = TickingRate.QUARTER;
             tickingEntity.Start(tickingEngine);
 
             tickingEngine.Start();

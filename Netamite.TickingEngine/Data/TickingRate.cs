@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Netamite.TickingEngine.Data {
     public static class TickingRate {
-        public const float FULL = 1f;
-        public const float HALF = 0.5f;
-        public const float THIRD = 0.333f;
-        public const float QUARTER = 0.25f;
-        public const float FIFTH = 0.2f;
-        public const float SIXTH = 0.1666666f;
+        public const int FULL = 1;
+        public const int HALF = 2;
+        public const int THIRD = 3;
+        public const int QUARTER = 4;
+        public const int FIFTH = 5;
+        public const int SIXTH = 6;
     }
 }

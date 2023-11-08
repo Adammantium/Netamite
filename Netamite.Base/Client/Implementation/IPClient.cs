@@ -29,18 +29,21 @@ namespace Netamite.Client.Implementation {
 
             Log.Info(Defines.CLIENT, $"Connecting to {ip}:{port}...");
 
-            tcp = new TcpSocket(ip, port);
-            tcp.onPacket = AwaitingConnectionHandler;
-            tcp.onDisconnect = onConnectionAbort;
+            Thread connectThread = new Thread(() => {
+                tcp = new TcpSocket(ip, port);
+                tcp.onPacket = AwaitingConnectionHandler;
+                tcp.onDisconnect = onConnectionAbort;
 
-            if(!tcp.client.Connected) {
-                _STATE = "FAILED";
-                Disconnect();
-                OnConnectionError?.Invoke("Connection failed.");
-                return;
-            } else {
-                EstablishConnection();
-            }
+                if(!tcp.client.Connected) {
+                    _STATE = "FAILED";
+                    Disconnect();
+                    OnConnectionError?.Invoke("Connection failed.");
+                    return;
+                } else {
+                    EstablishConnection();
+                }
+            }) { IsBackground = true, Name = "TcpConnection" };
+            connectThread.Start();
         }
 
         public override void InvokeOnConnect() {

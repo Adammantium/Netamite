@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace NetamiteTest.Ticking {
     internal class TickingEntityTest : TickingEntity {
         public override void OnTick() {
-            Console.WriteLine("Entity "+ Id);
+            Console.WriteLine("Entity " + Id);
         }
     }
 }

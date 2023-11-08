@@ -13,9 +13,10 @@ namespace Netamite.TickingEngine.Entity {
 
         private TickingEngine tickingEngine = null;
 
-        private float _tickingRate = TickingRate.HALF;
-        public float tickingRate {
+        private int _tickingRate = TickingRate.FULL;
+        public int tickingRate {
             get { return _tickingRate; }
+            set { _tickingRate = value; }
         }
 
         public void Start(TickingEngine tickingEngine = null) {
@@ -35,5 +36,8 @@ namespace Netamite.TickingEngine.Entity {
 
         public virtual void OnTick() { }
 
+        public int GetTickMod() {
+            return tickingRate;
+        }
     }
 }
