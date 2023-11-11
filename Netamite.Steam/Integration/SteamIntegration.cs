@@ -26,8 +26,16 @@ namespace Netamite.Steam.Integration {
         public static bool AllowOverlayJoining = true;
 
         public static Action<Client.SteamClient> OnOverlayJoin;
+        /// <summary>
+        /// Gets called once you receive an invite for the current game.
+        /// 1 - UserId inviting you
+        /// 2 - LobbyId to connect to
+        /// </summary>
+        public static Action<ulong, ulong> OnInviteReceived;
 
-        public static bool Initialize(long AppId, bool withCallbackThread = true) {
+        private static ulong _AppId = 0;
+
+        public static bool Initialize(ulong AppId, bool withCallbackThread = true) {
             _isInitialized = false;
             try {
                 _isInitialized = SteamAPI.Init();
@@ -59,6 +67,7 @@ namespace Netamite.Steam.Integration {
             RegisterCallbacks();
             
             _isInitialized = true;
+            _AppId = AppId;
 
             SteamNetworking.AllowP2PPacketRelay(true);
 
@@ -68,8 +77,10 @@ namespace Netamite.Steam.Integration {
 
 
         protected static Callback<GameLobbyJoinRequested_t> callbackGameLobbyJoinRequested;
+        protected static Callback<LobbyInvite_t> callbackLobbyInvite;
         private static void RegisterCallbacks() {
             callbackGameLobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
+            callbackLobbyInvite            = Callback<LobbyInvite_t>.           Create(OnLobbyInvite);
         }
 
         private static Thread callbackThread;
@@ -134,6 +145,12 @@ namespace Netamite.Steam.Integration {
             Client.SteamClient steamClient = new Client.SteamClient((ulong) param.m_steamIDLobby);
 
             OnOverlayJoin?.Invoke(steamClient);
+        }
+
+        private static void OnLobbyInvite(LobbyInvite_t param) {
+            if(param.m_ulGameID == _AppId) {
+                OnInviteReceived?.Invoke(param.m_ulSteamIDUser, param.m_ulSteamIDLobby);
+            }
         }
     }
 }
