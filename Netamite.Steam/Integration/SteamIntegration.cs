@@ -104,7 +104,7 @@ namespace Netamite.Steam.Integration {
         public static void Shutdown() {
             _isInitialized = false;
             SteamAPI.Shutdown();
-            callbackThread.Abort();
+            callbackThread?.Abort();
         }
 
         public static Lobby GetLobbyInfo(ulong lobbyId) {
