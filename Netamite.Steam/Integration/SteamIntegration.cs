@@ -28,10 +28,11 @@ namespace Netamite.Steam.Integration {
         public static Action<Client.SteamClient> OnOverlayJoin;
         /// <summary>
         /// Gets called once you receive an invite for the current game.
-        /// 1 - UserId inviting you
-        /// 2 - LobbyId to connect to
+        /// 1 - GameId
+        /// 2 - UserId inviting you
+        /// 3 - LobbyId to connect to
         /// </summary>
-        public static Action<ulong, ulong> OnInviteReceived;
+        public static Action<ulong, ulong, ulong> OnInviteReceived;
 
         private static ulong _AppId = 0;
 
@@ -148,9 +149,9 @@ namespace Netamite.Steam.Integration {
         }
 
         private static void OnLobbyInvite(LobbyInvite_t param) {
-            if(param.m_ulGameID == _AppId) {
-                OnInviteReceived?.Invoke(param.m_ulSteamIDUser, param.m_ulSteamIDLobby);
-            }
+            //if(param.m_ulGameID == _AppId) {
+            OnInviteReceived?.Invoke(param.m_ulGameID, param.m_ulSteamIDUser, param.m_ulSteamIDLobby);
+            //}
         }
     }
 }
