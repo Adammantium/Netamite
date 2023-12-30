@@ -1,7 +1,11 @@
 ﻿using Netamite.Converter;
+using Netamite.Extension;
+using Netamite.Network.Packet.Attributes;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Netamite.Network {
@@ -89,15 +93,45 @@ namespace Netamite.Network {
             }
         }
 
-        public void WriteRaw(object val) {
+        public void WriteRawFallback(object val) {
             using(var stream = new MemoryStream()) {
                 var formatter = new BinaryFormatter();
                 formatter.Serialize(stream, val);
                 stream.Flush();
-                stream.Position = 0;
 
                 byte[] bytes = stream.ToArray();
                 buffer.AddRange(bytes);
+            }
+        }
+
+        public void WriteRaw(object obj) {
+            MemberInfo[] myMembers = obj.GetType().GetMembers();
+
+            for(int i = 0; i < myMembers.Length; i++) {
+                MemberInfo memberInfo = myMembers[i];
+
+                object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
+
+                if(atts.Length > 0) {
+                    Type t = memberInfo.GetUnderlyingType();
+
+                    if(t.IsArray) {
+                        System.Collections.IList val = (System.Collections.IList) memberInfo.GetValue(obj);
+
+                        if(val == null) {
+                            WriteArray(null);
+                        } else {
+                            object[] array = new object[val.Count];
+                            val.CopyTo(array, 0);
+
+                            WriteArray(array, (atts[0] as SyncedVar).LowPrecision);
+                        }
+                    } else {
+                        object val = memberInfo.GetValue(obj);
+
+                        Write(val, (atts[0] as SyncedVar).LowPrecision);
+                    }
+                }
             }
         }
 
@@ -136,17 +170,49 @@ namespace Netamite.Network {
             return values;
         }
 
-        public T ReadRaw<T>() {
+        public object ReadRawFallback() {
             using(var stream = new MemoryStream(readableBuffer)) {
                 var formatter = new BinaryFormatter();
                 stream.Seek(readPos, SeekOrigin.Begin);
 
-                T val = (T) formatter.Deserialize(stream);
+                object val = formatter.Deserialize(stream);
 
-                readPos += (int) stream.Position;
+                readPos = (int) stream.Position;
 
                 return val;
             }
+        }
+
+        public object ReadRaw(Type type) {
+            MemberInfo[] myMembers = type.GetMembers();
+            object obj = Activator.CreateInstance(type);
+
+            for(int i = 0; i < myMembers.Length; i++) {
+                MemberInfo memberInfo = myMembers[i];
+
+                object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
+
+                if(atts.Length > 0) {
+                    Type t = memberInfo.GetUnderlyingType();
+
+                    //try {
+                    if(t.IsArray) {
+                        object[] val = ReadArray(t.GetElementType(), (atts[0] as SyncedVar).LowPrecision);
+
+                        if(val.Length > 0 && val[0] != null) {
+                            Array filledArray = Array.CreateInstance(val[0].GetType(), val.Length);
+                            Array.Copy(val, filledArray, val.Length);
+
+                            memberInfo.SetValue(obj, filledArray);
+                        }
+                    } else {
+                        object val = Read(t, (atts[0] as SyncedVar).LowPrecision);
+
+                        memberInfo.SetValue(obj, val);
+                    }
+                }
+            }
+            return obj;
         }
 
         public object Read(Type type, bool lowPrecision = false, bool moveReadPos = true) {
@@ -159,8 +225,7 @@ namespace Netamite.Network {
                 }
             } catch(MissingDataConverterException) { } // Ignore it and just read it raw
 
-            return null;
-            //return ReadRaw(val); // not working atm
+            return ReadRaw(type);
         }
         #endregion
 

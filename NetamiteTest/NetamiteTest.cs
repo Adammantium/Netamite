@@ -23,6 +23,7 @@ namespace NetamiteTest {
                 new Option("TCP/UDP",           () => IPTest.DoTest()),
                 new Option("STEAM",             () => SteamTest.DoTest()),
                 new Option("TIMEOUT TEST",      () => TimeoutTest.DoTest()),
+                new Option("Nested Data Test",  () => NestedTest.DoTest()),
                 new Option("Exit",              () => Environment.Exit(0)),
             };
 

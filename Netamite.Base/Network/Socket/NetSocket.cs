@@ -50,10 +50,11 @@ namespace Netamite.Network.Socket {
                 if(buffer.Count >= length + 2) {
                     byte[] packet_data = buffer.GetRange(2, length).ToArray();
 
-                    using(NetPacket packet = NetPacket.ReadPacket(packet_data)) {
-                        if(packet == null) break;
+                    NetPacket packet = NetPacket.ReadPacket(packet_data);
+                    if(packet != null) {
                         HandleData(packet);
                     }
+                    
 
                     bytesReceived += length + 2;
                     if(buffer.Count >= length + 2) buffer.RemoveRange(0, length + 2);

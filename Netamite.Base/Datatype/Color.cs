@@ -22,7 +22,7 @@
             this.g = g;
             this.b = b;
         }
-
+        
         public Color(float r, float g, float b, float a) : this(r, g, b) {
             this.a = a;
         }

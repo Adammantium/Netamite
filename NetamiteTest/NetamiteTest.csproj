@@ -48,9 +48,11 @@
   <ItemGroup>
     <Compile Include="ConsoleMenu.cs" />
     <Compile Include="IPTest.cs" />
+    <Compile Include="NestedTest.cs" />
     <Compile Include="NetamiteTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SteamTest.cs" />
+    <Compile Include="Test\NestedPacket.cs" />
     <Compile Include="Ticking\TickingEntityTest.cs" />
     <Compile Include="Ticking\TickingTest.cs" />
     <Compile Include="TimeoutTest.cs" />

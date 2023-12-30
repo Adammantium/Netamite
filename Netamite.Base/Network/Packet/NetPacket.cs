@@ -159,11 +159,11 @@ namespace Netamite.Network.Packet {
                 if(atts.Length > 0) {
                     Type t = memberInfo.GetUnderlyingType();
 
-                    try {
+                    //try {
                         if(t.IsArray) {
                             object[] val = stream.ReadArray(t.GetElementType(), (atts[0] as SyncedVar).LowPrecision);
                             
-                            if(val.Length > 0) {
+                            if(val.Length > 0 && val[0] != null) {
                                 Array filledArray = Array.CreateInstance(val[0].GetType(), val.Length);
                                 Array.Copy(val, filledArray, val.Length);
 
@@ -182,9 +182,9 @@ namespace Netamite.Network.Packet {
 
                             memberInfo.SetValue(this, val);
                         }
-                    }catch(Exception ex) {
-                        throw new Exception("Error on " + myType + " while reading " + memberInfo.Name + "\n" + ex.Message);
-                    }
+                    //}catch(Exception ex) {
+                    //    throw new Exception("Error on " + myType + " while reading " + memberInfo.Name + "\n" + ex.Message);
+                    //}
                 }
             }
         }
