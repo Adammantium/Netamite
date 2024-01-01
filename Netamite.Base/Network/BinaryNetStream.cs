@@ -78,14 +78,14 @@ namespace Netamite.Network {
 
         public void WriteArray(object[] val, bool lowPrecision = false) {
             if(val == null) {
-                Write((byte) 0);
+                Write((ushort) 0);
                 return;
             }
 
             Type type = val.GetType();
 
             if(type.IsArray) {
-                Write((byte) val.Length);
+                Write((ushort) val.Length);
 
                 foreach(object v in val) {
                     Write(v, lowPrecision);
@@ -161,10 +161,10 @@ namespace Netamite.Network {
         }
 
         public object[] ReadArray(Type type, bool lowPrecision = false, bool moveReadPos = true) {
-            byte length = ReadByte(moveReadPos);
+            ushort length = (ushort) Read(typeof(ushort), false, moveReadPos);
 
             object[] values = new object[length];
-            for(byte i = 0; i < length; i++) {
+            for(ushort i = 0; i < length; i++) {
                 values[i] = Read(type, lowPrecision, moveReadPos);
             }
             return values;

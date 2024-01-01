@@ -1,0 +1,32 @@
+﻿using AMP.Compression;
+using Netamite.Client.Definition;
+using Netamite.Network.Packet;
+using Netamite.Network.Packet.Attributes;
+using Netamite.Server.Data;
+using Netamite.Server.Definition;
+using System;
+
+namespace Netamite.Voice.Packet {
+    [PacketDefinition(false, PacketType.AUDIO)]
+    public class AudioPacket : NetPacket {
+        [SyncedVar] public int clientId;
+        [SyncedVar] public byte[] voiceData;
+
+        public AudioPacket() { }
+
+        public AudioPacket(int clientId, byte[] voiceData) {
+            this.clientId  = clientId;
+            this.voiceData = voiceData;
+        }
+
+        public override bool ProcessClient(NetamiteClient client) {
+            VoiceClient.instance?.OnData(clientId, voiceData);
+            return true;
+        }
+
+        public override bool ProcessServer(NetamiteServer server, ClientInformation client) {
+            server.SendToAllExcept(this, client.ClientId);
+            return true;
+        }
+    }
+}

@@ -57,6 +57,7 @@
     <Compile Include="Ticking\TickingTest.cs" />
     <Compile Include="TimeoutTest.cs" />
     <Compile Include="ValueConverterTest.cs" />
+    <Compile Include="VoiceTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Netamite.Base\Netamite.Base.csproj">
@@ -70,6 +71,10 @@
     <ProjectReference Include="..\Netamite.TickingEngine\Netamite.TickingEngine.csproj">
       <Project>{fa84fadc-c40a-4fb2-96a8-de132618cb45}</Project>
       <Name>Netamite.TickingEngine</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Netamite.Voice\Netamite.Voice.csproj">
+      <Project>{e45d0700-2294-4f46-ab99-907aa2757f5b}</Project>
+      <Name>Netamite.Voice</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

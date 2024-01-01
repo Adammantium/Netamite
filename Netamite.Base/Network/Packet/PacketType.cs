@@ -9,5 +9,6 @@
         PING                    = 5,
         TIME_SYNCHRONIZATION    = 6,
         MESSAGE                 = 7,
+        AUDIO                   = 8,
     }
 }

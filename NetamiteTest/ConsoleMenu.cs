@@ -27,14 +27,18 @@ namespace NetamiteTest {
                 if(keyinfo.Key == ConsoleKey.DownArrow) {
                     if(index + 1 < options.Count) {
                         index++;
-                        WriteMenu();
+                    } else {
+                        index = 0;
                     }
+                    WriteMenu();
                 }
                 if(keyinfo.Key == ConsoleKey.UpArrow) {
                     if(index - 1 >= 0) {
                         index--;
-                        WriteMenu();
+                    } else {
+                        index = options.Count - 1;
                     }
+                    WriteMenu();
                 }
                 // Handle different action for the option
                 if(keyinfo.Key == ConsoleKey.Enter) {

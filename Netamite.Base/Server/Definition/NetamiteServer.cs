@@ -145,6 +145,7 @@ namespace Netamite.Server.Definition {
 
         public void ProcessPacket(ClientInformation client, NetPacket packet) {
             if(!_clients.ContainsKey(client.ClientId)) return;
+            if(packet == null) return;
 
             client.lastPacketTimestamp = TimeHelper.Millis; // Remember when we received the last packet to not timeout the player
 

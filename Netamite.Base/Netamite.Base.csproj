@@ -50,6 +50,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Client\Implementation\IPClient.cs" />
+    <Compile Include="Compression\Compressor.cs" />
+    <Compile Include="Compression\Deflate.cs" />
+    <Compile Include="Compression\GZipCompression.cs" />
     <Compile Include="Converter\DataConverter.cs" />
     <Compile Include="Converter\DataConverterInterface.cs" />
     <Compile Include="Converter\Implementation\BooleanConverter.cs" />

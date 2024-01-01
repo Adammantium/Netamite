@@ -24,6 +24,7 @@ namespace NetamiteTest {
                 new Option("STEAM",             () => SteamTest.DoTest()),
                 new Option("TIMEOUT TEST",      () => TimeoutTest.DoTest()),
                 new Option("Nested Data Test",  () => NestedTest.DoTest()),
+                new Option("Voice Test",        () => VoiceTest.DoTest()),
                 new Option("Exit",              () => Environment.Exit(0)),
             };
 
