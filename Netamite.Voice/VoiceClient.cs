@@ -3,8 +3,8 @@ using Netamite.Client.Definition;
 using Netamite.Voice.Audio;
 using Netamite.Voice.Codec;
 using Netamite.Voice.Packet;
+using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 
 namespace Netamite.Voice {
     public class VoiceClient {
@@ -82,6 +82,25 @@ namespace Netamite.Voice {
             CheckClient(clientId);
 
             audioPlayers[clientId].SetVolume(volume);
+        }
+
+        public static Dictionary<int, string> GetDevices() {
+            Dictionary<int, string> devices = new Dictionary<int, string>();
+            int waveInDevices = WaveInEvent.DeviceCount;
+            for(int waveInDevice = 0; waveInDevice < waveInDevices; waveInDevice++) {
+                WaveInCapabilities deviceInfo = WaveInEvent.GetCapabilities(waveInDevice);
+                devices.Add(waveInDevice, deviceInfo.ProductName);
+            }
+            return devices;
+        }
+
+        public void SetDevice(int deviceId) {
+            reader?.SetDevice(deviceId);
+        }
+
+        public void SetRecordingThreshold(float threshold) {
+            if(reader != null)
+                reader.MinVolumePeak = threshold;
         }
     }
 }

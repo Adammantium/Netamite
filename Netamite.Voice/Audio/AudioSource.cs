@@ -1,12 +1,5 @@
-﻿using Microsoft.SqlServer.Server;
-using NAudio.Mixer;
+﻿using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using NAudio.Wave;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 namespace Netamite.Voice.Audio {
     internal class AudioSource {
 

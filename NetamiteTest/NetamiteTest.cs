@@ -1,11 +1,6 @@
-﻿using Netamite.Logging;
-using Netamite.TickingEngine;
-using NetamiteTest.Ticking;
+﻿using NetamiteTest.Ticking;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Text.RegularExpressions;
 using static NetamiteTest.ConsoleMenu;
 
 namespace NetamiteTest {

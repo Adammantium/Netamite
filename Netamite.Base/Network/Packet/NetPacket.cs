@@ -7,7 +7,6 @@ using Netamite.Server.Data;
 using Netamite.Server.Definition;
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
@@ -62,7 +61,7 @@ namespace Netamite.Network.Packet {
 
             if(hasLength) stream.Read(typeof(ushort)); // Flush away the length
             byte type = stream.ReadByte(false);
-            
+
             Type implementationType = GetPacketImplementation(type);
             if(implementationType == null) return null;
 

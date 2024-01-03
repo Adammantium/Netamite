@@ -1,10 +1,8 @@
-﻿using AMP.Compression;
-using Netamite.Client.Definition;
+﻿using Netamite.Client.Definition;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Attributes;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;
-using System;
 
 namespace Netamite.Voice.Packet {
     [PacketDefinition(false, PacketType.AUDIO)]

@@ -1,11 +1,9 @@
 ﻿using Netamite.Client.Definition;
-using Netamite.Logging;
 using Netamite.Server.Data;
 using Netamite.Server.Definition;
 using System;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace Netamite {
     public class Netamite {

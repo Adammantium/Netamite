@@ -1,10 +1,6 @@
 ﻿using Netamite.TickingEngine;
 using Netamite.TickingEngine.Data;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NetamiteTest.Ticking {
     internal class TickingTest {

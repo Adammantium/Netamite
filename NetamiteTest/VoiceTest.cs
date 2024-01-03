@@ -1,17 +1,13 @@
-﻿using Netamite.Client.Definition;
+﻿using Netamite;
+using Netamite.Client.Definition;
 using Netamite.Client.Implementation;
 using Netamite.Logging;
-using Netamite.Network.Packet.Implementations;
 using Netamite.Server.Definition;
 using Netamite.Server.Implementation;
-using Netamite;
-using System;
+using Netamite.Voice;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Netamite.Voice;
 
 namespace NetamiteTest {
     internal class VoiceTest {
@@ -74,6 +70,14 @@ namespace NetamiteTest {
                 if(id == 1) {
                     VoiceClient voiceClient = new VoiceClient(client);
                     voiceClient.Start();
+
+                    /*
+                    Log.Debug("Devices:");
+                    foreach(var dev in VoiceClient.GetDevices()) {
+                        Log.Debug(dev.Key + " " + dev.Value);
+                    }
+                    voiceClient.SetDevice(1);
+                    */
                 }
 
                 Thread.Sleep(60000);
