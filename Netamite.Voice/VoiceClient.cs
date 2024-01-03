@@ -1,9 +1,9 @@
 ﻿using NAudio.Wave;
 using Netamite.Client.Definition;
+using Netamite.Logging;
 using Netamite.Voice.Audio;
 using Netamite.Voice.Codec;
 using Netamite.Voice.Packet;
-using System;
 using System.Collections.Generic;
 
 namespace Netamite.Voice {
@@ -84,7 +84,7 @@ namespace Netamite.Voice {
             audioPlayers[clientId].SetVolume(volume);
         }
 
-        public static Dictionary<int, string> GetDevices() {
+        public static Dictionary<int, string> GetInputDevices() {
             Dictionary<int, string> devices = new Dictionary<int, string>();
             int waveInDevices = WaveInEvent.DeviceCount;
             for(int waveInDevice = 0; waveInDevice < waveInDevices; waveInDevice++) {
@@ -94,8 +94,16 @@ namespace Netamite.Voice {
             return devices;
         }
 
-        public void SetDevice(int deviceId) {
+        public void SetInputDevice(int deviceId) {
             reader?.SetDevice(deviceId);
+        }
+
+        internal int _OutputDeviceId = 0;
+        public void SetOutputDevice(int deviceId) {
+            _OutputDeviceId = deviceId;
+            foreach(var player in audioPlayers.Values) {
+                player?.SetDevice(deviceId);
+            }
         }
 
         public void SetRecordingThreshold(float threshold) {

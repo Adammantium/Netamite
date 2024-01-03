@@ -1,5 +1,6 @@
 ﻿using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+
 namespace Netamite.Voice.Audio {
     internal class AudioSource {
 
@@ -9,6 +10,8 @@ namespace Netamite.Voice.Audio {
 
         private VoiceClient voiceClient;
 
+        private bool playing = false;
+
         public AudioSource(VoiceClient voiceClient) {
             this.voiceClient = voiceClient;
 
@@ -17,6 +20,7 @@ namespace Netamite.Voice.Audio {
 
             Output = new WaveOutEvent();
             Output.DesiredLatency = voiceClient.Latency + 50;
+            Output.DeviceNumber = voiceClient._OutputDeviceId;
             Output.Init(Mixer);
 
             waveProvider = new BufferedWaveProvider(voiceClient.Format);
@@ -26,16 +30,21 @@ namespace Netamite.Voice.Audio {
 
         public void Start() {
             Output.Play();
+            playing = true;
         }
 
         public void Stop() {
             Output.Stop();
 
             Mixer.RemoveAllMixerInputs();
+
+            playing = false;
         }
 
 
         public void QueuePlay(byte[] bytes) {
+            if(!playing) return; // Dont process data if audio source is stopped
+
             byte[] data = voiceClient.Codec.Decode(bytes);
 
             waveProvider.AddSamples(data, 0, data.Length);
@@ -43,6 +52,10 @@ namespace Netamite.Voice.Audio {
 
         internal void SetVolume(float volume) {
             Output.Volume = volume;
+        }
+
+        internal void SetDevice(int deviceId) {
+            Output.DeviceNumber = deviceId;
         }
     }
 }

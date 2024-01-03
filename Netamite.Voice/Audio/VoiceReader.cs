@@ -1,7 +1,5 @@
 ﻿using NAudio.Wave;
-using Netamite.Logging;
 using Netamite.Voice.Packet;
-using System;
 
 namespace Netamite.Voice {
     public class VoiceReader {
