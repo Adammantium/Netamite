@@ -71,13 +71,10 @@ namespace NetamiteTest {
                     VoiceClient voiceClient = new VoiceClient(client);
                     voiceClient.Start();
 
-                    /*
                     Log.Debug("Devices:");
-                    foreach(var dev in VoiceClient.GetDevices()) {
+                    foreach(var dev in VoiceClient.GetInputDevices()) {
                         Log.Debug(dev.Key + " " + dev.Value);
                     }
-                    voiceClient.SetDevice(1);
-                    */
                 }
 
                 Thread.Sleep(60000);

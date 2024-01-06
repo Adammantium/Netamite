@@ -28,7 +28,7 @@ namespace Netamite.Voice {
         /// <summary>
         /// Wished latency in ms
         /// </summary>
-        public int Latency = 100;
+        public int Latency = 50;
 
         private IDictionary<int, AudioSource> audioPlayers = new Dictionary<int, AudioSource>();
 
