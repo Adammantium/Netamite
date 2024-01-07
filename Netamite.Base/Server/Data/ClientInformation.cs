@@ -5,7 +5,16 @@ namespace Netamite.Server.Data {
     public class ClientInformation {
 
         public int      ClientId;
-        public string   ClientName;
+        private string _ClientName;
+        public string ClientName {
+            get { 
+                if(string.IsNullOrWhiteSpace(_ClientName)) {
+                    return "User" + ClientId;
+                }
+                return _ClientName;
+            }
+            set { _ClientName = value; }
+        }
         public DateTime ConnectionTimestamp;
 
         internal long lastTimeSyncStamp;
