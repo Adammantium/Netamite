@@ -21,8 +21,8 @@ namespace Netamite.Network.Packet {
                 
                 try {
                     typelist = assembly.GetTypes().ToArray();
-                }catch(Exception) {
-                    continue;
+                }catch(ReflectionTypeLoadException e) {
+                    typelist = e.Types;
                 }
 
                 for(int i = 0; i < typelist.Length; i++) {
@@ -46,6 +46,7 @@ namespace Netamite.Network.Packet {
             Type[] typelist = Assembly.GetAssembly(typeof(NetPacket)).GetTypes().ToArray();
 
             for(int i = 0; i < typelist.Length; i++) {
+                if(packetType == 41) Log.Warn(typelist[i]);
                 byte thisPacketType = getPacketType(typelist[i]);
                 if(thisPacketType == packetType) {
                     if(packetTypes.ContainsKey(thisPacketType)) continue;
@@ -63,7 +64,10 @@ namespace Netamite.Network.Packet {
             byte type = stream.ReadByte(false);
 
             Type implementationType = GetPacketImplementation(type);
-            if(implementationType == null) return null;
+            if(implementationType == null) {
+                Log.Err(Defines.NETAMITE, $"No implementation for packet id {type} found.");
+                return null;
+            }
 
             object packetInstance = Activator.CreateInstance(implementationType);
             if(packetInstance is NetPacket) {
@@ -194,6 +198,8 @@ namespace Netamite.Network.Packet {
         }
 
         private static byte getPacketType(Type type) {
+            if(type == null) return (byte)PacketType.UNKNOWN;
+
             try {
                 Attribute attribute = type.GetCustomAttribute(typeof(PacketDefinition), true);
                 if(attribute != null) { 

@@ -1,5 +1,5 @@
-﻿using AMP.Network.Helper;
-using Netamite.Logging;
+﻿using Netamite.Logging;
+using Netamite.Network.Helper;
 using Netamite.Network.Packet;
 using System;
 using System.IO;

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
-namespace AMP.Network.Helper {
+namespace Netamite.Network.Helper {
     internal class NetworkUtil {
         internal static string GetIP(string address) {
             if(!address.Equals("127.0.0.1")) {

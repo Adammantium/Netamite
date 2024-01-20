@@ -1,7 +1,7 @@
-﻿using AMP.Network.Helper;
-using Netamite.Client.Definition;
+﻿using Netamite.Client.Definition;
 using Netamite.Datatype;
 using Netamite.Logging;
+using Netamite.Network.Helper;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Socket;

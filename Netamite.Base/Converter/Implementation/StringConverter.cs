@@ -21,7 +21,7 @@ namespace Netamite.Converter.Implementation {
             byte[] str_bytes = Encoding.UTF8.GetBytes(value);
 
             List<byte> bytes = new List<byte>();
-            bytes.AddRange(IntConverter.GetBytes(str_bytes.Length));
+            bytes.AddRange(IntConverter.GetBytes(str_bytes.Length, lowPrecision));
 
             if(str_bytes.Length > 0) bytes.AddRange(str_bytes);
 
