@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using NAudio.Mixer;
+using NAudio.Wave;
 using Netamite.Client.Definition;
 using Netamite.Logging;
 using Netamite.Voice.Audio;
@@ -43,7 +44,21 @@ namespace Netamite.Voice {
 
             reader = new VoiceReader(this);
 
+            FixAudio();
+
             reader.OnAudioPacketReady += OnPacketReady;
+        }
+
+        public void FixAudio() {
+            FixAudio(_OutputDeviceId);
+        }
+
+        public static void FixAudio(int deviceId) {
+            // Fix issue with audio when enabling Voice Chat
+            WaveOutEvent Output = new WaveOutEvent();
+            Output.DesiredLatency = 50;
+            Output.DeviceNumber = deviceId;
+            Output.Volume = 1.0f;
         }
 
         public void Start() {

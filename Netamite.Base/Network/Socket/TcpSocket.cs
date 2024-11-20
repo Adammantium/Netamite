@@ -60,7 +60,7 @@ namespace Netamite.Network.Socket {
         public TcpSocket(TcpClient client) {
             _client = client;
 
-            client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+            client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, false);
             client.ReceiveBufferSize = transmission_bits;
             client.SendBufferSize = transmission_bits;
             _stream = client.GetStream();
@@ -72,7 +72,7 @@ namespace Netamite.Network.Socket {
 
         public TcpSocket(string ip, int port) {
             _client = new TcpClient();
-            client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+            client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, false);
             client.ReceiveBufferSize = transmission_bits;
             client.SendBufferSize = transmission_bits;
 
