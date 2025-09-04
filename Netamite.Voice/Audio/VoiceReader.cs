@@ -22,95 +22,129 @@ namespace Netamite.Voice {
         public int SamplePrefixCount = 5;
 
         private bool recording = false;
+        private bool usingExternalAudio = false;
+        private int additional_samples = 0;
 
-        public VoiceReader(VoiceClient voiceClient) {
+        public VoiceReader(VoiceClient voiceClient, bool useExternalAudio = false) {
             this.voiceClient = voiceClient;
+            this.usingExternalAudio = useExternalAudio;
 
-            Input = new WaveInEvent();
-            Input.WaveFormat = voiceClient.Format;
-            Input.BufferMilliseconds = voiceClient.Latency;
-            Input.DataAvailable += NewInputData;
-
-            Input.RecordingStopped += Input_RecordingStopped;
+            if (!useExternalAudio) {
+                Input = new WaveInEvent();
+                Input.WaveFormat = voiceClient.Format;
+                Input.BufferMilliseconds = voiceClient.Latency;
+                Input.DataAvailable += NewInputData;
+                Input.RecordingStopped += Input_RecordingStopped;
+            }
         }
 
         public void Start() {
-            Input.StartRecording();
+            if (!usingExternalAudio && Input != null) {
+                Input.StartRecording();
+            }
             recording = true;
         }
 
         public void Stop() {
-            Input.StopRecording();
+            if (!usingExternalAudio && Input != null) {
+                Input.StopRecording();
+            }
             recording = false;
         }
 
-        private int additional_samples = 0;
+        /// <summary>
+        /// Process external audio data from any source (e.g., Unity microphone)
+        /// Assumes 16-bit PCM audio in the format expected by the codec
+        /// </summary>
+        /// <param name="audioData">Raw 16-bit PCM audio buffer</param>
+        public void ProcessExternalAudio(byte[] audioData)
+        {
+            // Only process if recording is active
+            if (recording == false) return;
+            
+            float max = GetAudioPeak(audioData, audioData.Length, MinVolumePeak);
+
+            if (max > MinVolumePeak || additional_samples > 0) {
+                if (max > MinVolumePeak) additional_samples = SamplePrefixCount;
+                else additional_samples--;
+
+                OnAudioPacketReady?.Invoke(
+                    new AudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(audioData)));
+            }
+        }
+
         private void NewInputData(object sender, WaveInEventArgs args) {
             float max = GetAudioPeak(args, MinVolumePeak);
 
-            if(max > MinVolumePeak || additional_samples > 0) {
-                if(max > MinVolumePeak) additional_samples = SamplePrefixCount;
+            if (max > MinVolumePeak || additional_samples > 0) {
+                if (max > MinVolumePeak) additional_samples = SamplePrefixCount;
                 else additional_samples--;
 
-                OnAudioPacketReady.Invoke(new AudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(args.Buffer)));
+                OnAudioPacketReady?.Invoke(new AudioPacket(voiceClient.client.ClientId,
+                    voiceClient.Codec.Encode(args.Buffer)));
             }
         }
 
         private float GetAudioPeak(WaveInEventArgs args, float threshold = 1f) {
-            switch(voiceClient.Format.BitsPerSample) {
-                case 16: return GetAudioPeak16bit(args, threshold);
-                case 32: return GetAudioPeak32bit(args, threshold);
+            return GetAudioPeak(args.Buffer, args.BytesRecorded, threshold);
+        }
+
+        private float GetAudioPeak(byte[] buffer, int bytesRecorded, float threshold = 1f) {
+            switch (voiceClient.Format.BitsPerSample) {
+                case 16: return GetAudioPeak16bit(buffer, bytesRecorded, threshold);
+                case 32: return GetAudioPeak32bit(buffer, bytesRecorded, threshold);
                 default: break;
             }
 
             return 0;
         }
 
-        private float GetAudioPeak16bit(WaveInEventArgs args, float threshold = 1f) {
+        private float GetAudioPeak16bit(byte[] buffer, int bytesRecorded, float threshold = 1f) {
             float max = 0;
             // interpret as 16 bit audio
-            for(int index = 0; index < args.BytesRecorded; index += 2) {
-                short sample = (short)((args.Buffer[index + 1] << 8) |
-                                        args.Buffer[index + 0]);
+            for (int index = 0; index < bytesRecorded; index += 2) {
+                short sample = (short)((buffer[index + 1] << 8) |
+                                        buffer[index + 0]);
                 // to floating point
                 var sample32 = sample / 32768f;
-                // absolute value 
-                if(sample32 < 0) sample32 = -sample32;
+                // absolute value
+                if (sample32 < 0) sample32 = -sample32;
                 // is this the max value?
-                if(sample32 > max) max = sample32;
+                if (sample32 > max) max = sample32;
 
-                if(max > threshold) break;
+                if (max > threshold) break;
             }
             return max;
         }
-        private float GetAudioPeak32bit(WaveInEventArgs args, float threshold = 1f) {
+
+        private float GetAudioPeak32bit(byte[] buffer, int bytesRecorded, float threshold = 1f) {
             float max = 0;
-            var buffer = new WaveBuffer(args.Buffer);
+            var waveBuffer = new WaveBuffer(buffer);
             // interpret as 32 bit floating point audio
-            for(int index = 0; index < args.BytesRecorded / 4; index++) {
-                var sample = buffer.FloatBuffer[index];
+            for (int index = 0; index < bytesRecorded / 4; index++) {
+                var sample = waveBuffer.FloatBuffer[index];
 
-                // absolute value 
-                if(sample < 0) sample = -sample;
+                // absolute value
+                if (sample < 0) sample = -sample;
                 // is this the max value?
-                if(sample > max) max = sample;
+                if (sample > max) max = sample;
 
-                if(max > threshold) break;
+                if (max > threshold) break;
             }
             return max;
         }
 
         internal void SetDevice(int deviceId) {
-            if(WaveInEvent.DeviceCount > deviceId) {
+            if (!usingExternalAudio && Input != null && WaveInEvent.DeviceCount > deviceId) {
                 Input.DeviceNumber = deviceId;
-                if(recording) {
+                if (recording) {
                     Input.StopRecording();
                 }
             }
         }
 
         private void Input_RecordingStopped(object sender, StoppedEventArgs e) {
-            if(recording)
+            if (recording && !usingExternalAudio && Input != null)
                 Input.StartRecording();
         }
     }

@@ -7,6 +7,7 @@ namespace Netamite.Voice.Audio {
         private WaveOutEvent Output;
         private MixingSampleProvider Mixer;
         private BufferedWaveProvider waveProvider;
+        private VolumeSampleProvider volumeSampleProvider;
 
         private VoiceClient voiceClient;
 
@@ -25,7 +26,9 @@ namespace Netamite.Voice.Audio {
 
             waveProvider = new BufferedWaveProvider(voiceClient.Format);
             waveProvider.BufferLength = (32 / 8) * voiceClient.Format.SampleRate * voiceClient.Format.Channels * 5; // 5 seconds of buffer.
-            Mixer.AddMixerInput(waveProvider);
+            volumeSampleProvider = new VolumeSampleProvider(waveProvider.ToSampleProvider());
+
+            Mixer.AddMixerInput(volumeSampleProvider);
         }
 
         public void Start() {
@@ -51,7 +54,7 @@ namespace Netamite.Voice.Audio {
         }
 
         internal void SetVolume(float volume) {
-            Output.Volume = volume;
+            volumeSampleProvider.Volume = volume;
         }
 
         internal void SetDevice(int deviceId) {

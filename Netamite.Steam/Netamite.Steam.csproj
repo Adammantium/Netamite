@@ -69,4 +69,8 @@
     <Content Include="Libs\Steamworks.NET.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy "$(TargetDir)$(TargetName).dll" "$(SolutionDir)..\\" /Y
+xcopy "$(TargetDir)$(TargetName).pdb" "$(SolutionDir)..\\" /Y</PostBuildEvent>
+  </PropertyGroup>
 </Project>

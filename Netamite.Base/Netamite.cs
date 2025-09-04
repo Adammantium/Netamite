@@ -4,6 +4,7 @@ using Netamite.Server.Definition;
 using System;
 using System.IO;
 using System.Reflection;
+using Netamite.Logging;
 
 namespace Netamite {
     public class Netamite {
@@ -16,16 +17,6 @@ namespace Netamite {
         private static bool initialized = false;
         public static void Initialize() {
             if(initialized) return;
-            
-            // Brute force other netamite dlls so we can make sure all DataConverters are loaded into RAM
-            // TODO: Make nicer in the future
-            string[] files = Directory.GetFiles(".", "*.dll");
-            foreach( string file in files ) {
-                if(file.ToLower().Contains("netamite.")) {
-                    Assembly assembly = Assembly.LoadFrom(file);
-                }
-            }
-
             initialized = true;
         }
 

@@ -35,7 +35,9 @@
     <StartupObject>NetamiteTest.NetamiteTest</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Steamworks.NET, Version=20.1.0.0, Culture=neutral, PublicKeyToken=null" />
+    <Reference Include="Steamworks.NET">
+      <HintPath>..\..\..\..\SteamLibrary\steamapps\common\Blade &amp; Sorcery\BladeAndSorcery_Data\Managed\Steamworks.NET.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -81,4 +83,8 @@
     <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy "$(TargetDir)$(TargetName).dll" "$(SolutionDir)..\\" /Y
+xcopy "$(TargetDir)$(TargetName).pdb" "$(SolutionDir)..\\" /Y</PostBuildEvent>
+  </PropertyGroup>
 </Project>

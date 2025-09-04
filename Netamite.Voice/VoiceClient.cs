@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using NAudio.Mixer;
+using NAudio.Wave;
 using Netamite.Client.Definition;
 using Netamite.Logging;
 using Netamite.Voice.Audio;
@@ -31,8 +32,11 @@ namespace Netamite.Voice {
         public int Latency = 50;
 
         private IDictionary<int, AudioSource> audioPlayers = new Dictionary<int, AudioSource>();
+        
 
-        public VoiceClient(NetamiteClient client, AudioCodec audioCodec = null) {
+        public bool UseExternalAudio { get; private set; } = false;
+        
+        public VoiceClient(NetamiteClient client, AudioCodec audioCodec = null, bool useExternalAudio = false) {
             if(instance != null) {
                 instance.Stop();
             }
@@ -40,11 +44,23 @@ namespace Netamite.Voice {
             instance = this;
             this.client = client;
             this.Codec = audioCodec == null ? new G722Codec() : audioCodec;
+            this.UseExternalAudio = useExternalAudio;
 
-            reader = new VoiceReader(this);
-
+            reader = new VoiceReader(this, useExternalAudio);
             reader.OnAudioPacketReady += OnPacketReady;
         }
+        
+        /// <summary>
+        /// Process raw PCM audio data from external sources (e.g., Unity microphone)
+        /// Assumes 16-bit PCM data that matches the codec's expected format
+        /// </summary>
+        /// <param name="audioData">Raw 16-bit PCM audio data</param>
+        public void ProcessExternalAudioData(byte[] audioData) {
+            if (UseExternalAudio && reader != null) {
+                reader.ProcessExternalAudio(audioData);
+            }
+        }
+
 
         public void Start() {
             if(UseMic) reader.Start();

@@ -17,13 +17,15 @@ namespace Netamite.Network.Packet {
 
         internal static void BuildPacketImplementationCache() {
             foreach(Assembly assembly in AppDomain.CurrentDomain.GetAssemblies()) {
-                Type[] typelist = null;
+                Type[] typelist;
                 
                 try {
                     typelist = assembly.GetTypes().ToArray();
                 }catch(ReflectionTypeLoadException e) {
                     typelist = e.Types;
                 }
+
+                if(typelist == null) continue;
 
                 for(int i = 0; i < typelist.Length; i++) {
                     byte thisPacketType = getPacketType(typelist[i]);
