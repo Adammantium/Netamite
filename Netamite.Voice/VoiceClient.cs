@@ -62,18 +62,6 @@ namespace Netamite.Voice {
         }
 
 
-        public void FixAudio() {
-            FixAudio(_OutputDeviceId);
-        }
-
-        public static void FixAudio(int deviceId) {
-            // Fix issue with audio when enabling Voice Chat
-            WaveOutEvent Output = new WaveOutEvent();
-            Output.DesiredLatency = 50;
-            Output.DeviceNumber = deviceId;
-            Output.Volume = 1.0f;
-        }
-
         public void Start() {
             if(UseMic) reader.Start();
         }

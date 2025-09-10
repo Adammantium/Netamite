@@ -206,10 +206,14 @@ namespace Netamite.Client.Definition {
             }
         }
         private void PingThread() {
-            while(!additionalServerThreadsCancellation.IsCancellationRequested && PingDelay > 0) {
-                Send(new PingPacket());
+            try {
+                while (!additionalServerThreadsCancellation.IsCancellationRequested && PingDelay > 0) {
+                    Send(new PingPacket());
 
-                Thread.Sleep(PingDelay);
+                    Thread.Sleep(PingDelay);
+                }
+            }catch(ThreadAbortException) {
+                // Just ignore it, connection is probably closed
             }
         }
     }

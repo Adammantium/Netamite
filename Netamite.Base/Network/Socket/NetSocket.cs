@@ -101,6 +101,8 @@ namespace Netamite.Network.Socket {
                     return;
                 }catch(ArgumentNullException) {
                     continue;
+                } catch(ObjectDisposedException) {
+                    continue;
                 }
             }
         }
