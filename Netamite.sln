@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Unity", "Netamite.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.TickingEngine", "Netamite.TickingEngine\Netamite.TickingEngine.csproj", "{FA84FADC-C40A-4FB2-96A8-DE132618CB45}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Voice", "Netamite.Voice\Netamite.Voice.csproj", "{E45D0700-2294-4F46-AB99-907AA2757F5B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Unity.Voice", "Netamite.Unity.Voice\Netamite.Unity.Voice.csproj", "{E45D0700-2294-4F46-AB99-907AA2757F5B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

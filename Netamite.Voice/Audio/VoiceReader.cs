@@ -68,8 +68,7 @@ namespace Netamite.Voice {
                 if (max > MinVolumePeak) additional_samples = SamplePrefixCount;
                 else additional_samples--;
 
-                OnAudioPacketReady?.Invoke(
-                    new AudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(audioData)));
+                OnAudioPacketReady?.Invoke(new AudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(audioData)));
             }
         }
 
@@ -80,8 +79,7 @@ namespace Netamite.Voice {
                 if (max > MinVolumePeak) additional_samples = SamplePrefixCount;
                 else additional_samples--;
 
-                OnAudioPacketReady?.Invoke(new AudioPacket(voiceClient.client.ClientId,
-                    voiceClient.Codec.Encode(args.Buffer)));
+                OnAudioPacketReady?.Invoke(new AudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(args.Buffer)));
             }
         }
 

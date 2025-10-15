@@ -32,7 +32,9 @@ namespace Netamite.Voice {
         public int Latency = 50;
 
         private IDictionary<int, AudioSource> audioPlayers = new Dictionary<int, AudioSource>();
-        
+
+        public delegate void onAudioPacketReceived(int playerId, byte[] voiceData);
+        public onAudioPacketReceived OnAudioPacketReceived;
 
         public bool UseExternalAudio { get; private set; } = false;
         
@@ -79,7 +81,10 @@ namespace Netamite.Voice {
             
             CheckClient(clientId);
 
-            audioPlayers[clientId]?.QueuePlay(voiceData);
+            if(UseExternalAudio)
+                OnAudioPacketReceived?.Invoke(clientId, voiceData);
+            else
+                audioPlayers[clientId]?.QueuePlay(voiceData);
         }
 
         internal void OnPacketReady(AudioPacket packet) {
