@@ -11,7 +11,7 @@ namespace Netamite.Unity.Voice {
 
         [Tooltip("Sample rate of the microphone recording. Must match codec requirements (16000 for G722).")]
         [SerializeField] private int sampleRate = 16000;
-
+        
         [Tooltip("Length of audio buffer in seconds.")]
         [SerializeField] private int bufferLengthSeconds = 1;
 
@@ -30,7 +30,7 @@ namespace Netamite.Unity.Voice {
         /// <summary>
         /// How many samples should be processed after the microphone is not reaching its peak anymore, so it wont suddenly cut off
         /// </summary>
-        public int SamplePrefixCount = 5;
+        public int SampleSuffixCount = 5;
         
         private int additional_samples = 0;
 
@@ -49,7 +49,7 @@ namespace Netamite.Unity.Voice {
         // State tracking
         private bool isCapturing = false;
         private bool isInitialized = false;
-        private int channels = 1; // G722 is mono
+        private int channels = 1; // Mono
         
         /// <summary>
         /// Initialize with a VoiceClient instance
@@ -90,7 +90,7 @@ namespace Netamite.Unity.Voice {
 
             // Wait for microphone to initialize
             while (Microphone.GetPosition(microphoneDeviceName) <= 0) { }
-
+            
             // Prepare buffers - calculate appropriate buffer size based on capture frequency
             int samplesPerCapture = Mathf.CeilToInt(sampleRate * channels * captureFrequency);
             sampleBuffer = new float[samplesPerCapture];
@@ -173,9 +173,9 @@ namespace Netamite.Unity.Voice {
                         ConvertFloatToPCM16(sampleBuffer, pcmBuffer);
                         
                         float max = GetAudioPeak16bit(pcmBuffer, pcmBuffer.Length, MinVolumePeak);
-
+                        
                         if (max > MinVolumePeak || additional_samples > 0) {
-                            if (max > MinVolumePeak) additional_samples = SamplePrefixCount;
+                            if (max > MinVolumePeak) additional_samples = SampleSuffixCount;
                             else additional_samples--;
                             
                             OnAudioPacketReady?.Invoke(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
@@ -186,12 +186,12 @@ namespace Netamite.Unity.Voice {
                             if(talking) voiceClient?.OnTalkingStateChanged?.Invoke(false);
                             talking = false;
                         }
-
+                        
                         // Update position
                         previousPosition = (readPos + sampleBuffer.Length) % microphoneClip.samples;
                     }
                 }
-
+                
                 yield return new WaitForSeconds(captureFrequency);
             }
         }
@@ -203,12 +203,12 @@ namespace Netamite.Unity.Voice {
                 short sample = (short)((buffer[index + 1] << 8) |
                                         buffer[index + 0]);
                 // to floating point
-                var sample32 = sample / 32768f;
+                var sample32 = sample / (float) short.MaxValue;
                 // absolute value
                 if (sample32 < 0) sample32 = -sample32;
                 // is this the max value?
                 if (sample32 > max) max = sample32;
-
+                
                 if (max > threshold) break;
             }
             return max;

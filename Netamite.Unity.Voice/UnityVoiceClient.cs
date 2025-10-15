@@ -41,7 +41,7 @@ namespace Netamite.Unity.Voice {
 
             instance = this;
             this.client = client;
-            this.Codec = audioCodec == null ? new G729Codec() : audioCodec;
+            this.Codec = audioCodec ?? new G729Codec();
 
             GameObject voiceReaderObj = new GameObject("VoiceReader");
             reader = voiceReaderObj.AddComponent<VoiceReader>();
@@ -66,7 +66,7 @@ namespace Netamite.Unity.Voice {
             
             CheckClient(clientId);
             
-            audioPlayers[clientId]?.QueuePlay(voiceData);
+            audioPlayers[clientId]?.QueuePlay(Codec.Decode(voiceData));
         }
 
         internal void OnPacketReady(UnityAudioPacket packet) {
