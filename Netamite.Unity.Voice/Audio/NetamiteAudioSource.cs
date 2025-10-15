@@ -27,7 +27,6 @@ namespace Netamite.Unity.Voice.Audio {
 
         public void Initialize(UnityVoiceClient voiceClient) {
             this.voiceClient = voiceClient;
-            
         }
 
         public void Start() {
@@ -64,37 +63,31 @@ namespace Netamite.Unity.Voice.Audio {
             this.proximity = proximity;
             UpdateAudioSource();
         }
-
-
-        internal void SetDevice(int deviceId) {
-            
-        }
-        
         
         
         internal Queue<float> audioBuffer = new Queue<float>();
 
         public void UpdateAudioSource() {
-            audioSource.volume = this.volume;
+            AudioSource.volume = this.volume;
 
             if (this.proximity) {
-                audioSource.spatialize = true;
-                audioSource.spatialBlend = 1.0f;
-                audioSource.minDistance = 5f;
-                audioSource.maxDistance = 50f;
-                audioSource.rolloffMode = AudioRolloffMode.Linear;
+                AudioSource.spatialize = true;
+                AudioSource.spatialBlend = 1.0f;
+                AudioSource.minDistance = 5f;
+                AudioSource.maxDistance = 50f;
+                AudioSource.rolloffMode = AudioRolloffMode.Linear;
             } else {
-                audioSource.spatialize = false;
-                audioSource.spatialBlend = 0f;
+                AudioSource.spatialize = false;
+                AudioSource.spatialBlend = 0f;
             }
         }
 
         internal void PlayAudio(byte[] voiceData) {
             if (AudioSource.clip == null) {
-                audioSource.playOnAwake = true;
-                audioSource.loop = true;
-                audioSource.clip = AudioClip.Create("StreamingClip", 16000 * 10, 1, 16000, true, OnAudioFilterRead);
-                audioSource.Play();
+                AudioSource.playOnAwake = true;
+                AudioSource.loop = true;
+                AudioSource.clip = AudioClip.Create("StreamingClip", 16000 * 10, 1, 16000, true, OnAudioFilterRead);
+                AudioSource.Play();
             }
 
             float[] floatData = new float[voiceData.Length / 2];

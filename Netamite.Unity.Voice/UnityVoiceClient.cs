@@ -5,7 +5,6 @@ using Netamite.Unity.Voice.Audio;
 using Netamite.Unity.Voice.Packet;
 using System.Collections.Generic;
 using UnityEngine;
-using Netamite.Voice.Codec;
 
 namespace Netamite.Unity.Voice {
     public class UnityVoiceClient {
@@ -31,7 +30,10 @@ namespace Netamite.Unity.Voice {
 
         public delegate void onAudioPacketReceived(int playerId, byte[] voiceData);
         public onAudioPacketReceived OnAudioPacketReceived;
-        
+
+        public delegate void onTalkingStateChanged(bool talking);
+        public onTalkingStateChanged OnTalkingStateChanged;
+
         public UnityVoiceClient(NetamiteClient client, AudioCodec audioCodec = null, bool useExternalAudio = false) {
             if(instance != null) {
                 instance.Stop();
@@ -39,7 +41,7 @@ namespace Netamite.Unity.Voice {
 
             instance = this;
             this.client = client;
-            this.Codec = audioCodec == null ? new G722Codec() : audioCodec;
+            this.Codec = audioCodec == null ? new G729Codec() : audioCodec;
 
             GameObject voiceReaderObj = new GameObject("VoiceReader");
             reader = voiceReaderObj.AddComponent<VoiceReader>();
@@ -63,7 +65,7 @@ namespace Netamite.Unity.Voice {
             if(!UseOutput) return;
             
             CheckClient(clientId);
-
+            
             audioPlayers[clientId]?.QueuePlay(voiceData);
         }
 
@@ -117,15 +119,7 @@ namespace Netamite.Unity.Voice {
         public void SetInputDevice(string deviceName) {
             reader?.SetDevice(deviceName);
         }
-
-        internal int _OutputDeviceId = 0;
-        public void SetOutputDevice(int deviceId) {
-            _OutputDeviceId = deviceId;
-            foreach(var player in audioPlayers.Values) {
-                player?.SetDevice(deviceId);
-            }
-        }
-
+        
         public void SetRecordingThreshold(float threshold) {
             if(reader != null)
                 reader.MinVolumePeak = threshold;

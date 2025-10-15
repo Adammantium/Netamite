@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace SIPSorcery.Media {
+namespace SIPSorcery.Media
+{
     /// <summary>
     /// SpanDSP - a series of DSP components for telephony
     /// 
@@ -21,27 +22,32 @@ namespace SIPSorcery.Media {
     /// Computer Science, Speech Group
     /// Chengxiang Lu and Alex Hauptmann
     /// </summary>
-    public class G722Codec {
+    public class G722Codec
+    {
         /// <summary>
         /// hard limits to 16 bit samples
         /// </summary>
-        static short Saturate(int amp) {
+        static short Saturate(int amp)
+        {
             short amp16;
 
             // Hopefully this is optimised for the common case - not clipping
             amp16 = (short)amp;
-            if (amp == amp16) {
+            if (amp == amp16)
+            {
                 return amp16;
             }
 
-            if (amp > Int16.MaxValue) {
+            if (amp > Int16.MaxValue)
+            {
                 return Int16.MaxValue;
             }
 
             return Int16.MinValue;
         }
 
-        static void Block4(G722CodecState s, int band, int d) {
+        static void Block4(G722CodecState s, int band, int d)
+        {
             int wd1;
             int wd2;
             int wd3;
@@ -55,22 +61,27 @@ namespace SIPSorcery.Media {
             s.Band[band].p[0] = Saturate(s.Band[band].sz + d);
 
             // Block 4, UPPOL2
-            for (i = 0; i < 3; i++) {
+            for (i = 0; i < 3; i++)
+            {
                 s.Band[band].sg[i] = s.Band[band].p[i] >> 15;
             }
             wd1 = Saturate(s.Band[band].a[1] << 2);
 
             wd2 = (s.Band[band].sg[0] == s.Band[band].sg[1]) ? -wd1 : wd1;
-            if (wd2 > 32767) {
+            if (wd2 > 32767)
+            {
                 wd2 = 32767;
             }
 
             wd3 = (s.Band[band].sg[0] == s.Band[band].sg[2]) ? 128 : -128;
             wd3 += (wd2 >> 7);
             wd3 += (s.Band[band].a[2] * 32512) >> 15;
-            if (wd3 > 12288) {
+            if (wd3 > 12288)
+            {
                 wd3 = 12288;
-            } else if (wd3 < -12288) {
+            }
+            else if (wd3 < -12288)
+            {
                 wd3 = -12288;
             }
 
@@ -84,16 +95,20 @@ namespace SIPSorcery.Media {
 
             s.Band[band].ap[1] = Saturate(wd1 + wd2);
             wd3 = Saturate(15360 - s.Band[band].ap[2]);
-            if (s.Band[band].ap[1] > wd3) {
+            if (s.Band[band].ap[1] > wd3)
+            {
                 s.Band[band].ap[1] = wd3;
-            } else if (s.Band[band].ap[1] < -wd3) {
+            }
+            else if (s.Band[band].ap[1] < -wd3)
+            {
                 s.Band[band].ap[1] = -wd3;
             }
 
             // Block 4, UPZERO
             wd1 = (d == 0) ? 0 : 128;
             s.Band[band].sg[0] = d >> 15;
-            for (i = 1; i < 7; i++) {
+            for (i = 1; i < 7; i++)
+            {
                 s.Band[band].sg[i] = s.Band[band].d[i] >> 15;
                 wd2 = (s.Band[band].sg[i] == s.Band[band].sg[0]) ? wd1 : -wd1;
                 wd3 = (s.Band[band].b[i] * 32640) >> 15;
@@ -101,12 +116,14 @@ namespace SIPSorcery.Media {
             }
 
             // Block 4, DELAYA
-            for (i = 6; i > 0; i--) {
+            for (i = 6; i > 0; i--)
+            {
                 s.Band[band].d[i] = s.Band[band].d[i - 1];
                 s.Band[band].b[i] = s.Band[band].bp[i];
             }
 
-            for (i = 2; i > 0; i--) {
+            for (i = 2; i > 0; i--)
+            {
                 s.Band[band].r[i] = s.Band[band].r[i - 1];
                 s.Band[band].p[i] = s.Band[band].p[i - 1];
                 s.Band[band].a[i] = s.Band[band].ap[i];
@@ -121,7 +138,8 @@ namespace SIPSorcery.Media {
 
             // Block 4, FILTEZ
             s.Band[band].sz = 0;
-            for (i = 6; i > 0; i--) {
+            for (i = 6; i > 0; i--)
+            {
                 wd1 = Saturate(s.Band[band].d[i] + s.Band[band].d[i]);
                 s.Band[band].sz += (s.Band[band].b[i] * wd1) >> 15;
             }
@@ -155,7 +173,8 @@ namespace SIPSorcery.Media {
         /// <param name="inputG722Data"></param>
         /// <param name="inputLength">Number of bytes in input G722 data to decode</param>
         /// <returns>Number of samples written into output buffer</returns>
-        public int Decode(G722CodecState state, short[] outputBuffer, byte[] inputG722Data, int inputLength) {
+        public int Decode(G722CodecState state, short[] outputBuffer, byte[] inputG722Data, int inputLength)
+        {
             int dlowt;
             int rlow;
             int ihigh;
@@ -173,21 +192,27 @@ namespace SIPSorcery.Media {
 
             outlen = 0;
             rhigh = 0;
-            for (j = 0; j < inputLength;) {
-                if (state.Packed) {
+            for (j = 0; j < inputLength;)
+            {
+                if (state.Packed)
+                {
                     // Unpack the code bits
-                    if (state.InBits < state.BitsPerSample) {
+                    if (state.InBits < state.BitsPerSample)
+                    {
                         state.InBuffer |= (uint)(inputG722Data[j++] << state.InBits);
                         state.InBits += 8;
                     }
                     code = (int)state.InBuffer & ((1 << state.BitsPerSample) - 1);
                     state.InBuffer >>= state.BitsPerSample;
                     state.InBits -= state.BitsPerSample;
-                } else {
+                }
+                else
+                {
                     code = inputG722Data[j++];
                 }
 
-                switch (state.BitsPerSample) {
+                switch (state.BitsPerSample)
+                {
                     default:
                     case 8:
                         wd1 = code & 0x3F;
@@ -215,9 +240,12 @@ namespace SIPSorcery.Media {
                 rlow = state.Band[0].s + wd2;
 
                 // Block 6L, LIMIT
-                if (rlow > 16383) {
+                if (rlow > 16383)
+                {
                     rlow = 16383;
-                } else if (rlow < -16384) {
+                }
+                else if (rlow < -16384)
+                {
                     rlow = -16384;
                 }
 
@@ -229,9 +257,12 @@ namespace SIPSorcery.Media {
                 wd2 = rl42[wd1];
                 wd1 = (state.Band[0].nb * 127) >> 7;
                 wd1 += wl[wd2];
-                if (wd1 < 0) {
+                if (wd1 < 0)
+                {
                     wd1 = 0;
-                } else if (wd1 > 18432) {
+                }
+                else if (wd1 > 18432)
+                {
                     wd1 = 18432;
                 }
 
@@ -245,7 +276,8 @@ namespace SIPSorcery.Media {
 
                 Block4(state, 0, dlowt);
 
-                if (!state.EncodeFrom8000Hz) {
+                if (!state.EncodeFrom8000Hz)
+                {
                     // Block 2H, INVQAH
                     wd2 = qm2[ihigh];
                     dhigh = (state.Band[1].det * wd2) >> 15;
@@ -254,9 +286,12 @@ namespace SIPSorcery.Media {
                     rhigh = dhigh + state.Band[1].s;
 
                     // Block 6H, LIMIT
-                    if (rhigh > 16383) {
+                    if (rhigh > 16383)
+                    {
                         rhigh = 16383;
-                    } else if (rhigh < -16384) {
+                    }
+                    else if (rhigh < -16384)
+                    {
                         rhigh = -16384;
                     }
 
@@ -264,9 +299,12 @@ namespace SIPSorcery.Media {
                     wd2 = rh2[ihigh];
                     wd1 = (state.Band[1].nb * 127) >> 7;
                     wd1 += wh[wd2];
-                    if (wd1 < 0) {
+                    if (wd1 < 0)
+                    {
                         wd1 = 0;
-                    } else if (wd1 > 22528) {
+                    }
+                    else if (wd1 > 22528)
+                    {
                         wd1 = 22528;
                     }
 
@@ -281,15 +319,22 @@ namespace SIPSorcery.Media {
                     Block4(state, 1, dhigh);
                 }
 
-                if (state.ItuTestMode) {
+                if (state.ItuTestMode)
+                {
                     outputBuffer[outlen++] = (short)(rlow << 1);
                     outputBuffer[outlen++] = (short)(rhigh << 1);
-                } else {
-                    if (state.EncodeFrom8000Hz) {
+                }
+                else
+                {
+                    if (state.EncodeFrom8000Hz)
+                    {
                         outputBuffer[outlen++] = (short)(rlow << 1);
-                    } else {
+                    }
+                    else
+                    {
                         // Apply the receive QMF
-                        for (i = 0; i < 22; i++) {
+                        for (i = 0; i < 22; i++)
+                        {
                             state.QmfSignalHistory[i] = state.QmfSignalHistory[i + 2];
                         }
                         state.QmfSignalHistory[22] = rlow + rhigh;
@@ -297,7 +342,8 @@ namespace SIPSorcery.Media {
 
                         xout1 = 0;
                         xout2 = 0;
-                        for (i = 0; i < 12; i++) {
+                        for (i = 0; i < 12; i++)
+                        {
                             xout2 += state.QmfSignalHistory[2 * i] * qmf_coeffs[i];
                             xout1 += state.QmfSignalHistory[2 * i + 1] * qmf_coeffs[11 - i];
                         }
@@ -317,7 +363,8 @@ namespace SIPSorcery.Media {
         /// <param name="inputBuffer">PCM 16 bit samples to encode</param>
         /// <param name="inputBufferCount">Number of samples in the input buffer to encode</param>
         /// <returns>Number of encoded bytes written into output buffer</returns>
-        public int Encode(G722CodecState state, byte[] outputBuffer, short[] inputBuffer, int inputBufferCount) {
+        public int Encode(G722CodecState state, byte[] outputBuffer, short[] inputBuffer, int inputBufferCount)
+        {
             int dlow;
             int dhigh;
             int el;
@@ -345,26 +392,43 @@ namespace SIPSorcery.Media {
 
             g722_bytes = 0;
             xhigh = 0;
-            for (j = 0; j < inputBufferCount;) {
-                if (state.ItuTestMode) {
+            for (j = 0; j < inputBufferCount;)
+            {
+                if (state.ItuTestMode)
+                {
                     xlow =
                     xhigh = inputBuffer[j++] >> 1;
-                } else {
-                    if (state.EncodeFrom8000Hz) {
+                }
+                else
+                {
+                    if (state.EncodeFrom8000Hz)
+                    {
                         xlow = inputBuffer[j++] >> 1;
-                    } else {
+                    }
+                    else
+                    {
                         // Apply the transmit QMF
                         // Shuffle the buffer down
-                        for (i = 0; i < 22; i++) {
+                        for (i = 0; i < 22; i++)
+                        {
                             state.QmfSignalHistory[i] = state.QmfSignalHistory[i + 2];
                         }
                         state.QmfSignalHistory[22] = inputBuffer[j++];
-                        state.QmfSignalHistory[23] = inputBuffer[j++];
+                        if (j < inputBufferCount)
+                        {
+                            state.QmfSignalHistory[23] = inputBuffer[j++];
+                        }
+                        else
+                        {
+                            //Duplicate the last sample - fix odd shorts issue
+                            state.QmfSignalHistory[23] = state.QmfSignalHistory[22];
+                        }
 
                         // Discard every other QMF output
                         sumeven = 0;
                         sumodd = 0;
-                        for (i = 0; i < 12; i++) {
+                        for (i = 0; i < 12; i++)
+                        {
                             sumodd += state.QmfSignalHistory[2 * i] * qmf_coeffs[i];
                             sumeven += state.QmfSignalHistory[2 * i + 1] * qmf_coeffs[11 - i];
                         }
@@ -378,9 +442,11 @@ namespace SIPSorcery.Media {
                 // Block 1L, QUANTL
                 wd = (el >= 0) ? el : -(el + 1);
 
-                for (i = 1; i < 30; i++) {
+                for (i = 1; i < 30; i++)
+                {
                     wd1 = (q6[i] * state.Band[0].det) >> 12;
-                    if (wd < wd1) {
+                    if (wd < wd1)
+                    {
                         break;
                     }
                 }
@@ -395,9 +461,12 @@ namespace SIPSorcery.Media {
                 il4 = rl42[ril];
                 wd = (state.Band[0].nb * 127) >> 7;
                 state.Band[0].nb = wd + wl[il4];
-                if (state.Band[0].nb < 0) {
+                if (state.Band[0].nb < 0)
+                {
                     state.Band[0].nb = 0;
-                } else if (state.Band[0].nb > 18432) {
+                }
+                else if (state.Band[0].nb > 18432)
+                {
                     state.Band[0].nb = 18432;
                 }
 
@@ -409,10 +478,13 @@ namespace SIPSorcery.Media {
 
                 Block4(state, 0, dlow);
 
-                if (state.EncodeFrom8000Hz) {
+                if (state.EncodeFrom8000Hz)
+                {
                     // Just leave the high bits as zero
                     code = (0xC0 | ilow) >> (8 - state.BitsPerSample);
-                } else {
+                }
+                else
+                {
                     // Block 1H, SUBTRA
                     eh = Saturate(xhigh - state.Band[1].s);
 
@@ -430,9 +502,12 @@ namespace SIPSorcery.Media {
                     ih2 = rh2[ihigh];
                     wd = (state.Band[1].nb * 127) >> 7;
                     state.Band[1].nb = wd + wh[ih2];
-                    if (state.Band[1].nb < 0) {
+                    if (state.Band[1].nb < 0)
+                    {
                         state.Band[1].nb = 0;
-                    } else if (state.Band[1].nb > 22528) {
+                    }
+                    else if (state.Band[1].nb > 22528)
+                    {
                         state.Band[1].nb = 22528;
                     }
 
@@ -446,16 +521,20 @@ namespace SIPSorcery.Media {
                     code = ((ihigh << 6) | ilow) >> (8 - state.BitsPerSample);
                 }
 
-                if (state.Packed) {
+                if (state.Packed)
+                {
                     // Pack the code bits
                     state.OutBuffer |= (uint)(code << state.OutBits);
                     state.OutBits += state.BitsPerSample;
-                    if (state.OutBits >= 8) {
+                    if (state.OutBits >= 8)
+                    {
                         outputBuffer[g722_bytes++] = (byte)(state.OutBuffer & 0xFF);
                         state.OutBits -= 8;
                         state.OutBuffer >>= 8;
                     }
-                } else {
+                }
+                else
+                {
                     outputBuffer[g722_bytes++] = (byte)code;
                 }
             }
@@ -466,7 +545,8 @@ namespace SIPSorcery.Media {
     /// <summary>
     /// Stores state to be used between calls to Encode or Decode
     /// </summary>
-    public class G722CodecState {
+    public class G722CodecState
+    {
         /// <summary>
         /// ITU Test Mode
         /// TRUE if the operating in the special ITU test mode, with the band split filters disabled.
@@ -526,28 +606,40 @@ namespace SIPSorcery.Media {
         /// </summary>
         /// <param name="rate">Bitrate (typically 64000)</param>
         /// <param name="options">Special options</param>
-        public G722CodecState(int rate, G722Flags options) {
+        public G722CodecState(int rate, G722Flags options)
+        {
             this.Band = new Band[2] { new Band(), new Band() };
             this.QmfSignalHistory = new int[24];
             this.ItuTestMode = false;
 
-            if (rate == 48000) {
+            if (rate == 48000)
+            {
                 this.BitsPerSample = 6;
-            } else if (rate == 56000) {
+            }
+            else if (rate == 56000)
+            {
                 this.BitsPerSample = 7;
-            } else if (rate == 64000) {
+            }
+            else if (rate == 64000)
+            {
                 this.BitsPerSample = 8;
-            } else {
+            }
+            else
+            {
                 throw new ArgumentException("Invalid rate, should be 48000, 56000 or 64000");
             }
 
-            if ((options & G722Flags.SampleRate8000) == G722Flags.SampleRate8000) {
+            if ((options & G722Flags.SampleRate8000) == G722Flags.SampleRate8000)
+            {
                 this.EncodeFrom8000Hz = true;
             }
 
-            if (((options & G722Flags.Packed) == G722Flags.Packed) && this.BitsPerSample != 8) {
+            if (((options & G722Flags.Packed) == G722Flags.Packed) && this.BitsPerSample != 8)
+            {
                 this.Packed = true;
-            } else {
+            }
+            else
+            {
                 this.Packed = false;
             }
 
@@ -559,7 +651,8 @@ namespace SIPSorcery.Media {
     /// <summary>
     /// Band data for G722 Codec
     /// </summary>
-    public class Band {
+    public class Band
+    {
         /// <summary>s</summary>
         public int s;
         /// <summary>sp</summary>
@@ -592,7 +685,8 @@ namespace SIPSorcery.Media {
     /// G722 Flags
     /// </summary>
     [Flags]
-    public enum G722Flags {
+    public enum G722Flags
+    {
         /// <summary>
         /// None
         /// </summary>

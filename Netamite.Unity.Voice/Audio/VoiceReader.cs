@@ -17,10 +17,7 @@ namespace Netamite.Unity.Voice {
 
         [Tooltip("How often to capture and process microphone data.")]
         [SerializeField] private float captureFrequency = 0.05f; // 50ms update frequency
-
-        [Tooltip("How much the loudness is boosted for the cutoff value.")]
-        [SerializeField] private float cutoffAmplifier = 10f;
-
+        
         public delegate void onAudioPacketReady(UnityAudioPacket packet);
         public onAudioPacketReady OnAudioPacketReady;
 
@@ -39,6 +36,8 @@ namespace Netamite.Unity.Voice {
 
         public static string[] AvailableMicrophoneDevices => Microphone.devices;
 
+        public bool talking = false;
+        
         // References
         private UnityVoiceClient voiceClient;
         private AudioClip microphoneClip;
@@ -167,14 +166,25 @@ namespace Netamite.Unity.Voice {
 
                     // If we have enough samples to process
                     if (samplesAvailable >= sampleBuffer.Length) {
+                        
                         // Get audio samples from Unity's AudioClip
                         microphoneClip.GetData(sampleBuffer, readPos % microphoneClip.samples);
+                        
+                        ConvertFloatToPCM16(sampleBuffer, pcmBuffer);
+                        
+                        float max = GetAudioPeak16bit(pcmBuffer, pcmBuffer.Length, MinVolumePeak);
 
-                        if (IsLoudEnough(sampleBuffer)) {
-                            // Convert float samples to 16-bit PCM
-                            ConvertFloatToPCM16(sampleBuffer, pcmBuffer);
+                        if (max > MinVolumePeak || additional_samples > 0) {
+                            if (max > MinVolumePeak) additional_samples = SamplePrefixCount;
+                            else additional_samples--;
                             
                             OnAudioPacketReady?.Invoke(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
+
+                            if(!talking) voiceClient?.OnTalkingStateChanged?.Invoke(true);
+                            talking = true;
+                        } else {
+                            if(talking) voiceClient?.OnTalkingStateChanged?.Invoke(false);
+                            talking = false;
                         }
 
                         // Update position
@@ -186,14 +196,22 @@ namespace Netamite.Unity.Voice {
             }
         }
 
-        public bool IsLoudEnough(float[] sampleData) {
-            float totalLoudness = 0f;
+        private float GetAudioPeak16bit(byte[] buffer, int bytesRecorded, float threshold = 1f) {
+            float max = 0;
+            // interpret as 16 bit audio
+            for (int index = 0; index < bytesRecorded; index += 2) {
+                short sample = (short)((buffer[index + 1] << 8) |
+                                        buffer[index + 0]);
+                // to floating point
+                var sample32 = sample / 32768f;
+                // absolute value
+                if (sample32 < 0) sample32 = -sample32;
+                // is this the max value?
+                if (sample32 > max) max = sample32;
 
-            for (int i = 0; i < sampleData.Length; ++i) {
-                totalLoudness += Math.Abs(sampleData[i]);
+                if (max > threshold) break;
             }
-
-            return (totalLoudness / sampleData.Length) * cutoffAmplifier >= MinVolumePeak;
+            return max;
         }
 
         /// <summary>

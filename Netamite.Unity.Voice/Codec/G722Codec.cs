@@ -1,8 +1,10 @@
 ﻿using System;
+using Netamite.Logging;
+using Netamite.Unity.Voice.Audio;
 using Netamite.Unity.Voice.Codec;
 using SIPSorcery.Media;
 
-namespace Netamite.Voice.Codec {
+namespace Netamite.Unity.Voice.Codec {
     public class G722Codec : AudioCodec {
 
         public string Name => "G.722 16kHz";
@@ -20,13 +22,15 @@ namespace Netamite.Voice.Codec {
         }
 
         public byte[] Decode(byte[] data) {
-            short[] outputBuffer = new short[(int) Math.Ceiling(data.Length / 2f)];
-
+            short[] outputBuffer = new short[data.Length * 2];
+            
             int decoded = codec.Decode(decoderState, outputBuffer, data, data.Length);
+            
+            byte[] boutputBuffer = new byte[decoded];
+            Buffer.BlockCopy(outputBuffer, 0, boutputBuffer, 0, decoded);
 
-            byte[] boutputBuffer = new byte[outputBuffer.Length * sizeof(short)];
-            Buffer.BlockCopy(outputBuffer, 0, boutputBuffer, 0, boutputBuffer.Length);
-
+            //Log.Debug($"decoded {decoded} | {outputBuffer.Length} | {boutputBuffer.Length}");
+            
             return boutputBuffer;
         }
 
@@ -35,10 +39,17 @@ namespace Netamite.Voice.Codec {
             short[] sdata = new short[(int)Math.Ceiling(data.Length / 2f)];
             Buffer.BlockCopy(data, 0, sdata, 0, data.Length);
             
-            int decoded = codec.Encode(encoderState, outputBuffer, sdata, data.Length / 2);
-
-            byte[] finalBuffer = new byte[decoded];
-            Array.Copy(outputBuffer, finalBuffer, decoded);
+            int encoded = codec.Encode(encoderState, outputBuffer, sdata, data.Length / 2);
+            
+            byte[] finalBuffer = new byte[encoded];
+            Array.Copy(outputBuffer, finalBuffer, encoded);
+            
+            //Log.Debug($"encoded {encoded} | {sdata.Length} | {outputBuffer.Length} | {finalBuffer.Length}");
+#if MIRROR_BACK
+            var new_data = Decode(finalBuffer);
+            NetamiteAudioSource nas = UnityVoiceClient.instance?.GetAudioPlayer(0);
+            nas.QueuePlay(new_data);
+#endif
             
             return finalBuffer;
         }
