@@ -2,6 +2,7 @@
 using Netamite.Unity.Voice.Packet;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace Netamite.Unity.Voice {
     public class VoiceReader : MonoBehaviour {
@@ -18,6 +19,9 @@ namespace Netamite.Unity.Voice {
         [Tooltip("How often to capture and process microphone data.")]
         [SerializeField] private float captureFrequency = 0.05f; // 50ms update frequency
         
+        [Tooltip("How many packets should be held back to dont give latency for silence.")]
+        [SerializeField] private int packet_holdback = 1;
+
         public delegate void onAudioPacketReady(UnityAudioPacket packet);
         public onAudioPacketReady OnAudioPacketReady;
 
@@ -25,7 +29,7 @@ namespace Netamite.Unity.Voice {
         /// Min Volume before sending data at all
         /// Range 0.0 - 1.0 (inclusive)
         /// </summary>
-        public float MinVolumePeak = 0.04f;
+        public float MinVolumePeak = 0.4f;
 
         /// <summary>
         /// How many samples should be processed after the microphone is not reaching its peak anymore, so it wont suddenly cut off
@@ -141,8 +145,21 @@ namespace Netamite.Unity.Voice {
             }
         }
 
+        private int GetSamplesAvailable(int currentPosition) {
+            int samplesAvailable;
+            
+            if (currentPosition < previousPosition) {
+                // Wraparound case
+                samplesAvailable = (microphoneClip.samples - previousPosition) + currentPosition;
+            } else {
+                samplesAvailable = currentPosition - previousPosition;
+            }
+            
+            return samplesAvailable;
+        }
 
-
+        private Queue<UnityAudioPacket> buffer = new Queue<UnityAudioPacket>();
+        
         private IEnumerator ProcessMicrophone() {
             while (true) {
                 if (microphoneClip == null) {
@@ -155,18 +172,10 @@ namespace Netamite.Unity.Voice {
                 if (currentPosition != previousPosition) {
                     // Get new data
                     int readPos = previousPosition;
-                    int samplesAvailable;
-
-                    if (currentPosition < previousPosition) {
-                        // Wraparound case
-                        samplesAvailable = (microphoneClip.samples - previousPosition) + currentPosition;
-                    } else {
-                        samplesAvailable = currentPosition - previousPosition;
-                    }
-
+                    int samplesAvailable = GetSamplesAvailable(currentPosition);
+                    
                     // If we have enough samples to process
-                    if (samplesAvailable >= sampleBuffer.Length) {
-                        
+                    if(samplesAvailable >= sampleBuffer.Length) {
                         // Get audio samples from Unity's AudioClip
                         microphoneClip.GetData(sampleBuffer, readPos % microphoneClip.samples);
                         
@@ -177,16 +186,25 @@ namespace Netamite.Unity.Voice {
                         if (max > MinVolumePeak || additional_samples > 0) {
                             if (max > MinVolumePeak) additional_samples = SampleSuffixCount;
                             else additional_samples--;
-                            
-                            OnAudioPacketReady?.Invoke(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
 
-                            if(!talking) voiceClient?.OnTalkingStateChanged?.Invoke(true);
-                            talking = true;
+                            if (!talking) {
+                                if (buffer.Count < packet_holdback) {
+                                    buffer.Enqueue(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
+                                } else {
+                                    while(buffer.Count > 0) {
+                                        OnAudioPacketReady?.Invoke(buffer.Dequeue());
+                                    }
+                                    talking = true;
+                                    voiceClient?.OnTalkingStateChanged?.Invoke(true);
+                                }
+                            } else {
+                                OnAudioPacketReady?.Invoke(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
+                            }
                         } else {
-                            if(talking) voiceClient?.OnTalkingStateChanged?.Invoke(false);
+                            if (talking) voiceClient?.OnTalkingStateChanged?.Invoke(false);
                             talking = false;
                         }
-                        
+
                         // Update position
                         previousPosition = (readPos + sampleBuffer.Length) % microphoneClip.samples;
                     }
@@ -203,7 +221,7 @@ namespace Netamite.Unity.Voice {
                 short sample = (short)((buffer[index + 1] << 8) |
                                         buffer[index + 0]);
                 // to floating point
-                var sample32 = sample / (float) short.MaxValue;
+                var sample32 = (sample / (float) short.MaxValue) * 10;
                 // absolute value
                 if (sample32 < 0) sample32 = -sample32;
                 // is this the max value?

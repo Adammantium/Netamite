@@ -5,6 +5,7 @@ using Netamite.Unity.Voice.Audio;
 using Netamite.Unity.Voice.Packet;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 namespace Netamite.Unity.Voice {
     public class UnityVoiceClient {
@@ -95,8 +96,13 @@ namespace Netamite.Unity.Voice {
         }
         
         public void SetVolume(float volume) {
-            foreach(var audioPlayer in audioPlayers.Values)
-                audioPlayer.SetVolume(volume);
+            foreach (var audioPlayer in audioPlayers) {
+                try {
+                    audioPlayer.Value.SetVolume(volume);
+                } catch (NullReferenceException) {
+                    audioPlayers.Remove(audioPlayer.Key);
+                }
+            }
         }
         
         public void SetClientProximity(int clientId, bool proximity) {

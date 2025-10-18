@@ -83,13 +83,6 @@ namespace Netamite.Unity.Voice.Audio {
         }
 
         internal void PlayAudio(byte[] voiceData) {
-            if (AudioSource.clip == null) {
-                AudioSource.playOnAwake = true;
-                AudioSource.loop = true;
-                AudioSource.clip = AudioClip.Create("StreamingClip", 16000 * 10, 1, 16000, true, OnAudioFilterRead);
-                AudioSource.Play();
-            }
-
             float[] floatData = new float[voiceData.Length / 2];
             for (int i = 0; i < floatData.Length; i++) {
                 short sample = (short)(voiceData[i * 2] | (voiceData[i * 2 + 1] << 8));
@@ -101,8 +94,16 @@ namespace Netamite.Unity.Voice.Audio {
                     audioBuffer.Enqueue(sample);
                 }
             }
+            
+            if (AudioSource.clip == null) {
+                AudioSource.loop = true;
+                AudioSource.clip = AudioClip.Create("StreamingClip", 16000 * 2, 1, 16000, true, OnAudioFilterRead);
+            }
+            
+            if (!AudioSource.isPlaying)
+                AudioSource.Play();
         }
-
+        
         void OnAudioFilterRead(float[] data) {
             lock (audioBuffer) {
                 for (int i = 0; i < data.Length; i++) {
