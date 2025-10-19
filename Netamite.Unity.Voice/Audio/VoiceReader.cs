@@ -31,6 +31,8 @@ namespace Netamite.Unity.Voice {
         /// </summary>
         public float MinVolumePeak = 0.4f;
 
+        public bool CalculateTotalVolumePeak = false;
+        
         /// <summary>
         /// How many samples should be processed after the microphone is not reaching its peak anymore, so it wont suddenly cut off
         /// </summary>
@@ -41,7 +43,13 @@ namespace Netamite.Unity.Voice {
         public static string[] AvailableMicrophoneDevices => Microphone.devices;
 
         public bool talking = false;
-        
+
+        /// <summary>
+        /// Contains the current volume of the microphone input
+        /// </summary>
+        /// <value>The current volume.</value>
+        public float currentVolume { get; set; }
+
         // References
         private UnityVoiceClient voiceClient;
         private AudioClip microphoneClip;
@@ -66,7 +74,8 @@ namespace Netamite.Unity.Voice {
             this.voiceClient = voiceClient;
             isInitialized = true;
 
-            Start();
+            if(voiceClient != null)
+                Start();
         }
 
 
@@ -127,7 +136,7 @@ namespace Netamite.Unity.Voice {
             Debug.Log("[MicrophoneCapture] Stopped capturing microphone");
         }
         
-        internal void SetDevice(string deviceName) {
+        public void SetDevice(string deviceName) {
             if (deviceName == microphoneDeviceName) {
                 return;
             }
@@ -182,26 +191,27 @@ namespace Netamite.Unity.Voice {
                         ConvertFloatToPCM16(sampleBuffer, pcmBuffer);
                         
                         float max = GetAudioPeak16bit(pcmBuffer, pcmBuffer.Length, MinVolumePeak);
-                        
+                        currentVolume = max;
+
                         if (max > MinVolumePeak || additional_samples > 0) {
                             if (max > MinVolumePeak) additional_samples = SampleSuffixCount;
                             else additional_samples--;
 
                             if (!talking) {
                                 if (buffer.Count < packet_holdback) {
-                                    buffer.Enqueue(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
+                                    if(voiceClient != null) buffer.Enqueue(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
                                 } else {
                                     while(buffer.Count > 0) {
                                         OnAudioPacketReady?.Invoke(buffer.Dequeue());
                                     }
                                     talking = true;
-                                    voiceClient?.OnTalkingStateChanged?.Invoke(true);
+                                    if (voiceClient != null) voiceClient?.OnTalkingStateChanged?.Invoke(true);
                                 }
                             } else {
-                                OnAudioPacketReady?.Invoke(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
+                                if (voiceClient != null) OnAudioPacketReady?.Invoke(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
                             }
                         } else {
-                            if (talking) voiceClient?.OnTalkingStateChanged?.Invoke(false);
+                            if (voiceClient != null) if (talking) voiceClient?.OnTalkingStateChanged?.Invoke(false);
                             talking = false;
                         }
 
@@ -221,14 +231,15 @@ namespace Netamite.Unity.Voice {
                 short sample = (short)((buffer[index + 1] << 8) |
                                         buffer[index + 0]);
                 // to floating point
-                var sample32 = (sample / (float) short.MaxValue) * 10;
+                var sample32 = (sample / (float) short.MaxValue) * 5;
                 // absolute value
                 if (sample32 < 0) sample32 = -sample32;
                 // is this the max value?
                 if (sample32 > max) max = sample32;
                 
-                if (max > threshold) break;
+                if(!CalculateTotalVolumePeak && max > threshold) break;
             }
+            if (max > 1) return 1;
             return max;
         }
 
