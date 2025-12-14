@@ -89,6 +89,24 @@ namespace Netamite.Unity.Voice {
             return audioPlayers[clientId];
         }
         
+        public bool GetClientMute(int clientId) {
+            CheckClient(clientId);
+            
+            return audioPlayers[clientId].GetMute();
+        }
+
+        public void SetClientMute(int clientId, bool mute) {
+            CheckClient(clientId);
+            
+            audioPlayers[clientId].SetMute(mute);
+        }
+        
+        public float GetClientVolume(int clientId) {
+            CheckClient(clientId);
+
+            return audioPlayers[clientId].GetVolume();
+        }
+        
         public void SetClientVolume(int clientId, float volume) {
             CheckClient(clientId);
 

@@ -7,6 +7,7 @@ namespace Netamite.Unity.Voice.Audio {
 
         private UnityVoiceClient voiceClient;
 
+        private bool muted = false;
         private float volume = 1f;
         private bool proximity = true;
 
@@ -53,7 +54,20 @@ namespace Netamite.Unity.Voice.Audio {
             
             PlayAudio(bytes);
         }
+        
+        public bool GetMute() {
+            return this.muted;
+        }
 
+        public void SetMute(bool mute) {
+            this.muted = mute;
+            UpdateAudioSource();
+        }
+
+        public float GetVolume() {
+            return this.volume;
+        }
+        
         public void SetVolume(float volume) {
             this.volume = volume;
             UpdateAudioSource();
@@ -68,7 +82,7 @@ namespace Netamite.Unity.Voice.Audio {
         internal Queue<float> audioBuffer = new Queue<float>();
 
         public void UpdateAudioSource() {
-            AudioSource.volume = this.volume;
+            AudioSource.volume = muted ? 0 : this.volume;
 
             if (this.proximity) {
                 AudioSource.spatialize = true;
