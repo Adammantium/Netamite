@@ -161,11 +161,11 @@ namespace Netamite.Network.Packet {
                 MemberInfo memberInfo = myMembers[i];
 
                 object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
-
+                
                 if(atts.Length > 0) {
                     Type t = memberInfo.GetUnderlyingType();
 
-                    //try {
+                    try {
                         if(t.IsArray) {
                             object[] val = stream.ReadArray(t.GetElementType(), (atts[0] as SyncedVar).LowPrecision);
                             
@@ -188,9 +188,9 @@ namespace Netamite.Network.Packet {
 
                             memberInfo.SetValue(this, val);
                         }
-                    //}catch(Exception ex) {
-                    //    throw new Exception("Error on " + myType + " while reading " + memberInfo.Name + "\n" + ex.Message);
-                    //}
+                    }catch (Exception ex) {
+                        throw new Exception("Error on " + myType + " while reading " + memberInfo.Name + "\n" + ex.Message);
+                    }
                 }
             }
         }
