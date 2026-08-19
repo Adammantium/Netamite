@@ -18,6 +18,26 @@ namespace Netamite {
         public static void Initialize() {
             if(initialized) return;
             initialized = true;
+
+            LoadAllAssembliesInBaseDirectory();
+        }
+
+        // Converters and packet types are discovered by scanning AppDomain.CurrentDomain.GetAssemblies(),
+        // which only contains assemblies the CLR has already JIT-touched. Assemblies like Netamite.Unity
+        // that are referenced but never directly used before the first (de)serialization can otherwise be
+        // missing from that scan, silently breaking their converters. Force them all to load up front.
+        private static void LoadAllAssembliesInBaseDirectory() {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            if(string.IsNullOrEmpty(baseDir) || !Directory.Exists(baseDir)) return;
+
+            foreach(string dllPath in Directory.GetFiles(baseDir, "Netamite*.dll")) {
+                try {
+                    AssemblyName name = AssemblyName.GetAssemblyName(dllPath);
+                    Assembly.Load(name);
+                }catch(Exception ex) {
+                    Log.Err(ex);
+                }
+            }
         }
 
         public static void SetClientinfoType(Type type) {

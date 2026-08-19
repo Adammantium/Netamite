@@ -25,7 +25,13 @@ namespace Netamite.Converter {
             
             if(converter != null) {
                 object[] parameters = new object[] { value, bytesRead, startIndex, lowPrecision };
-                object result = converter.GetMethod("FromBytes").Invoke(null, parameters);
+                object result = null;
+                try {
+                    result = converter.GetMethod("FromBytes").Invoke(null, parameters);
+                }catch(System.Reflection.TargetInvocationException ex) {
+                    Logging.Log.Err(ex.InnerException);
+                    throw ex;
+                }
                 if(result != null) {
                     bytesRead = (int) parameters[1];
                 }

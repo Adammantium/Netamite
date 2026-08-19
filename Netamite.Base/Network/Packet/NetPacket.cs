@@ -1,4 +1,5 @@
 ﻿using Netamite.Client.Definition;
+using Netamite.Converter.Implementation;
 using Netamite.Extension;
 using Netamite.Logging;
 using Netamite.Network.Packet.Attributes;
@@ -92,7 +93,7 @@ namespace Netamite.Network.Packet {
             stream.Write(getPacketType());
 
             Type myType = GetType();
-            MemberInfo[] myMembers = myType.GetMembers();
+            MemberInfo[] myMembers = myType.GetMembers();//.OrderBy(m => m.Name).ToArray();
 
             //Log.Debug("DEBUG", myType);
 
@@ -116,7 +117,7 @@ namespace Netamite.Network.Packet {
                             val.CopyTo(array, 0);
 
                             #if DEBUG_MESSAGES
-                            //Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
+                            Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
                             #endif
 
                             stream.WriteArray(array, (atts[0] as SyncedVar).LowPrecision);
@@ -125,7 +126,7 @@ namespace Netamite.Network.Packet {
                         object val = memberInfo.GetValue(this);
 
                         #if DEBUG_MESSAGES
-                        //Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
+                        Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
                         #endif
 
                         stream.Write(val, (atts[0] as SyncedVar).LowPrecision);
@@ -136,7 +137,7 @@ namespace Netamite.Network.Packet {
             if(writeLength) {
                 stream.WriteLength();
             }
-
+            
             return stream.ToArray();
         }
 
@@ -153,11 +154,11 @@ namespace Netamite.Network.Packet {
             }
 
             Type myType = GetType();
-            MemberInfo[] myMembers = myType.GetMembers();
+            MemberInfo[] myMembers = myType.GetMembers();//.OrderBy(m => m.Name).ToArray();
 
             //Log.Debug("DEBUG", myType);
 
-            for(int i = 0; i < myMembers.Length; i++) {
+            for (int i = 0; i < myMembers.Length; i++) {
                 MemberInfo memberInfo = myMembers[i];
 
                 object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
@@ -174,7 +175,7 @@ namespace Netamite.Network.Packet {
                                 Array.Copy(val, filledArray, val.Length);
 
                                 #if DEBUG_MESSAGES
-                                //Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + filledArray);
+                                Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + filledArray);
                                 #endif
 
                                 memberInfo.SetValue(this, filledArray);
@@ -183,13 +184,17 @@ namespace Netamite.Network.Packet {
                             object val = stream.Read(t, (atts[0] as SyncedVar).LowPrecision);
 
                             #if DEBUG_MESSAGES
-                            //Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
+                            Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
                             #endif
 
                             memberInfo.SetValue(this, val);
                         }
                     }catch (Exception ex) {
-                        throw new Exception("Error on " + myType + " while reading " + memberInfo.Name + "\n" + ex.Message);
+                        #if DEBUG_MESSAGES
+                        throw new Exception("Error on " + myType + " while reading " + memberInfo.Name + " (t=" + t + ", readPos=" + stream.UnreadLength() + " unread of " + stream.Length() + ", data=" + StringConverter.ToHexString(data) + ")\n" + ex.StackTrace);
+                        #else
+                        throw new Exception("Error on " + myType + " while reading " + memberInfo.Name + "\n" + ex.StackTrace);
+                        #endif
                     }
                 }
             }

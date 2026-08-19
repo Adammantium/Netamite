@@ -3,6 +3,7 @@ using Netamite.Unity.Voice.Packet;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Security;
 
 namespace Netamite.Unity.Voice {
     public class VoiceReader : MonoBehaviour {
@@ -91,7 +92,7 @@ namespace Netamite.Unity.Voice {
             if (isCapturing) {
                 return;
             }
-
+            
             // Log available microphone devices
             Debug.Log("[MicrophoneCapture] Available microphones:");
             foreach (string device in Microphone.devices) {

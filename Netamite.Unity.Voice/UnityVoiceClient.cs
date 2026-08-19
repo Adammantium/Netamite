@@ -43,7 +43,7 @@ namespace Netamite.Unity.Voice {
             instance = this;
             this.client = client;
             this.Codec = audioCodec ?? new G729Codec();
-
+            
             GameObject voiceReaderObj = new GameObject("VoiceReader");
             reader = voiceReaderObj.AddComponent<VoiceReader>();
             reader.Initialize(this);

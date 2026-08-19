@@ -4,6 +4,7 @@ using Netamite.Network.Packet.Attributes;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
 
@@ -104,7 +105,7 @@ namespace Netamite.Network {
         }
 
         public void WriteRaw(object obj) {
-            MemberInfo[] myMembers = obj.GetType().GetMembers();
+            MemberInfo[] myMembers = obj.GetType().GetMembers();//.OrderBy(m => m.Name).ToArray();
 
             for(int i = 0; i < myMembers.Length; i++) {
                 MemberInfo memberInfo = myMembers[i];
@@ -183,8 +184,10 @@ namespace Netamite.Network {
         }
 
         public object ReadRaw(Type type) {
-            MemberInfo[] myMembers = type.GetMembers();
+            MemberInfo[] myMembers = type.GetMembers();//.OrderBy(m => m.Name).ToArray();
             object obj = Activator.CreateInstance(type);
+
+            bool readAnything = false;
 
             for(int i = 0; i < myMembers.Length; i++) {
                 MemberInfo memberInfo = myMembers[i];
@@ -192,6 +195,7 @@ namespace Netamite.Network {
                 object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
 
                 if(atts.Length > 0) {
+                    readAnything = true;
                     Type t = memberInfo.GetUnderlyingType();
 
                     //try {
@@ -211,6 +215,13 @@ namespace Netamite.Network {
                     }
                 }
             }
+
+            if(!readAnything) {
+                // No [SyncedVar] members and no DataConverter for this type: reading it would silently
+                // consume zero bytes and desync every field that follows. Fail loudly instead.
+                throw new MissingDataConverterException(type);
+            }
+
             return obj;
         }
 
