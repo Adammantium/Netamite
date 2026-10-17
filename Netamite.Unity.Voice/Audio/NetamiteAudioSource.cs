@@ -129,5 +129,30 @@ namespace Netamite.Unity.Voice.Audio {
                 }
             }
         }
+        
+        private readonly float[] samples = new float[256];
+        public float GetPeak() {
+            if (AudioSource == null || !AudioSource.isPlaying) return 0f;
+
+            float peak = 0f;
+            for (int channel = 0; channel < AudioSource.clip.channels; channel++) {
+                AudioSource.GetOutputData(samples, channel);
+                for (int i = 0; i < samples.Length; i++) {
+                    float abs = Mathf.Abs(samples[i]);
+                    if (abs > peak) peak = abs;
+                }
+            }
+            return peak;
+        }
+        
+        // RMS (average loudness) jitters less than the peak, usually looks better for lip sync
+        public float GetRms() {
+            if (AudioSource == null || !AudioSource.isPlaying) return 0f;
+
+            AudioSource.GetOutputData(samples, 0);
+            float sum = 0f;
+            for (int i = 0; i < samples.Length; i++) sum += samples[i] * samples[i];
+            return Mathf.Sqrt(sum / samples.Length);
+        }
     }
 }

@@ -5,7 +5,7 @@ using System.Text;
 namespace Netamite.Converter.Implementation {
     public class StringConverter : DataConverterInterface<string> {
         public static new string FromBytes(byte[] value, out int bytesRead, int startIndex = 0, bool lowPrecision = false) {
-            int num = UShortConverter.FromBytes(value, out bytesRead, startIndex, lowPrecision);
+            int num = IntConverter.FromBytes(value, out bytesRead, startIndex, lowPrecision);
 
             //Logging.Log.Debug(ToHexString(value));
             
@@ -26,7 +26,7 @@ namespace Netamite.Converter.Implementation {
             
             byte[] str_bytes = Encoding.UTF8.GetBytes(value);
 
-            List<byte> bytes = new List<byte>(UShortConverter.GetBytes((ushort) str_bytes.Length, lowPrecision));
+            List<byte> bytes = new List<byte>(IntConverter.GetBytes((ushort) str_bytes.Length, lowPrecision));
             
             if(str_bytes.Length > 0) bytes.AddRange(str_bytes);
             
