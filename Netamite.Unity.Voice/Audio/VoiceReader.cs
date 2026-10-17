@@ -104,7 +104,9 @@ namespace Netamite.Unity.Voice {
 
             // Wait for microphone to initialize
             while (Microphone.GetPosition(microphoneDeviceName) <= 0) { }
-            
+            previousPosition = Microphone.GetPosition(microphoneDeviceName);
+            buffer.Clear();
+
             // Prepare buffers - calculate appropriate buffer size based on capture frequency
             int samplesPerCapture = Mathf.CeilToInt(sampleRate * channels * captureFrequency);
             sampleBuffer = new float[samplesPerCapture];
@@ -178,50 +180,53 @@ namespace Netamite.Unity.Voice {
                 }
 
                 int currentPosition = Microphone.GetPosition(microphoneDeviceName);
+                int samplesAvailable = GetSamplesAvailable(currentPosition);
 
-                if (currentPosition != previousPosition) {
-                    // Get new data
-                    int readPos = previousPosition;
-                    int samplesAvailable = GetSamplesAvailable(currentPosition);
-                    
-                    // If we have enough samples to process
-                    if(samplesAvailable >= sampleBuffer.Length) {
-                        // Get audio samples from Unity's AudioClip
-                        microphoneClip.GetData(sampleBuffer, readPos % microphoneClip.samples);
-                        
-                        ConvertFloatToPCM16(sampleBuffer, pcmBuffer);
-                        
-                        float max = GetAudioPeak16bit(pcmBuffer, pcmBuffer.Length, MinVolumePeak);
-                        currentVolume = max;
+                // Drain everything recorded since the last tick. WaitForSeconds overshoots by up to a frame,
+                // so reading only one chunk per tick lets the read position drift behind the mic (up to the clip length)
+                while (samplesAvailable >= sampleBuffer.Length) {
+                    microphoneClip.GetData(sampleBuffer, previousPosition);
+                    ProcessChunk();
 
-                        if (max > MinVolumePeak || additional_samples > 0) {
-                            if (max > MinVolumePeak) additional_samples = SampleSuffixCount;
-                            else additional_samples--;
-
-                            if (!talking) {
-                                if (buffer.Count < packet_holdback) {
-                                    if(voiceClient != null) buffer.Enqueue(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
-                                } else {
-                                    while(buffer.Count > 0) {
-                                        OnAudioPacketReady?.Invoke(buffer.Dequeue());
-                                    }
-                                    talking = true;
-                                    if (voiceClient != null) voiceClient?.OnTalkingStateChanged?.Invoke(true);
-                                }
-                            } else {
-                                if (voiceClient != null) OnAudioPacketReady?.Invoke(new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer)));
-                            }
-                        } else {
-                            if (voiceClient != null) if (talking) voiceClient?.OnTalkingStateChanged?.Invoke(false);
-                            talking = false;
-                        }
-
-                        // Update position
-                        previousPosition = (readPos + sampleBuffer.Length) % microphoneClip.samples;
-                    }
+                    previousPosition = (previousPosition + sampleBuffer.Length) % microphoneClip.samples;
+                    samplesAvailable -= sampleBuffer.Length;
                 }
-                
+
                 yield return new WaitForSeconds(captureFrequency);
+            }
+        }
+
+        private void ProcessChunk() {
+            ConvertFloatToPCM16(sampleBuffer, pcmBuffer);
+
+            float max = GetAudioPeak16bit(pcmBuffer, pcmBuffer.Length, MinVolumePeak);
+            currentVolume = max;
+
+            if (max > MinVolumePeak || additional_samples > 0) {
+                if (max > MinVolumePeak) additional_samples = SampleSuffixCount;
+                else additional_samples--;
+
+                if (voiceClient == null) return;
+                UnityAudioPacket packet = new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer));
+
+                if (talking) {
+                    OnAudioPacketReady?.Invoke(packet);
+                    return;
+                }
+
+                buffer.Enqueue(packet);
+                if (buffer.Count > packet_holdback) {
+                    while (buffer.Count > 0) {
+                        OnAudioPacketReady?.Invoke(buffer.Dequeue());
+                    }
+                    talking = true;
+                    voiceClient.OnTalkingStateChanged?.Invoke(true);
+                }
+            } else {
+                // Drop held back packets so they don't get sent as stale audio on the next burst
+                buffer.Clear();
+                if (talking && voiceClient != null) voiceClient.OnTalkingStateChanged?.Invoke(false);
+                talking = false;
             }
         }
 
