@@ -10,6 +10,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
+using System.IO;
 using System.Net.Sockets;
 
 namespace Netamite.Server.Implementation {
@@ -76,17 +77,34 @@ namespace Netamite.Server.Implementation {
 
         private void TCPRequestCallback(IAsyncResult result) {
             if(tcpListener == null) return;
-            TcpClient tcpClient;
+            TcpClient tcpClient = null;
             try
             {
                 tcpClient = tcpListener.EndAcceptTcpClient(result);
             } catch(ObjectDisposedException) { return; } // Happens when closing a already disposed socket, so we can just ignore it
-            if(tcpListener == null) return;
-            tcpListener.BeginAcceptTcpClient(TCPRequestCallback, null);
+            catch(SocketException e) {
+                // A client that aborts mid handshake must not stop the accept loop
+                Log.Warn(Defines.SERVER, $"Failed to accept incoming connection: {e.Message}");
+            }
 
-            TcpSocket socket = new TcpSocket(tcpClient);
+            // Keep accepting no matter what happens to this client. This runs on the thread pool, so any
+            // uncaught exception kills the server process and every client gets refused until it restarts
+            try {
+                tcpListener?.BeginAcceptTcpClient(TCPRequestCallback, null);
+            } catch(ObjectDisposedException) { return; }
 
-            Log.Debug(Defines.SERVER, $"Incoming connection from {tcpClient.Client.RemoteEndPoint}... (" + waitingForConnectionSockets.Count + " still waiting)");
+            if(tcpClient == null) return;
+
+            TcpSocket socket;
+            try {
+                socket = new TcpSocket(tcpClient);
+                Log.Debug(Defines.SERVER, $"Incoming connection from {tcpClient.Client.RemoteEndPoint}... (" + waitingForConnectionSockets.Count + " still waiting)");
+            } catch(Exception e) when(e is SocketException || e is IOException || e is ObjectDisposedException) {
+                Log.Warn(Defines.SERVER, $"Incoming connection dropped during setup: {e.Message}");
+                tcpClient.Close();
+                return;
+            }
+
             waitingForConnectionSockets.TryAdd(socket, TimeHelper.Millis);
             socket.onPacket += (packet) => {
                 WaitForConnection(socket, packet);

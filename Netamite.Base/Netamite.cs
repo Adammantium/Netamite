@@ -26,11 +26,20 @@ namespace Netamite {
         // which only contains assemblies the CLR has already JIT-touched. Assemblies like Netamite.Unity
         // that are referenced but never directly used before the first (de)serialization can otherwise be
         // missing from that scan, silently breaking their converters. Force them all to load up front.
+        // AOT runtimes (Unity IL2CPP) ship no dll files and register every assembly at startup, so there is
+        // nothing to load there. Their BaseDirectory can also be unreadable (e.g. "/" on Android), hence the catch.
         private static void LoadAllAssembliesInBaseDirectory() {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            if(string.IsNullOrEmpty(baseDir) || !Directory.Exists(baseDir)) return;
+            if(string.IsNullOrEmpty(baseDir)) return;
 
-            foreach(string dllPath in Directory.GetFiles(baseDir, "Netamite*.dll")) {
+            string[] dllPaths;
+            try {
+                dllPaths = Directory.GetFiles(baseDir, "Netamite*.dll");
+            }catch(Exception ex) when(ex is UnauthorizedAccessException || ex is IOException) {
+                return;
+            }
+
+            foreach(string dllPath in dllPaths) {
                 try {
                     AssemblyName name = AssemblyName.GetAssemblyName(dllPath);
                     Assembly.Load(name);

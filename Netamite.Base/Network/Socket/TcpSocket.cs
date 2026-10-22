@@ -95,7 +95,19 @@ namespace Netamite.Network.Socket {
         }
 
         private void ConnectRequestCallback(IAsyncResult _result) {
-            client.EndConnect(_result);
+            // Runs on the thread pool, an uncaught exception here takes down the whole process.
+            // A failed connect leaves client.Connected false, which IPClient reports via OnConnectionError
+            try {
+                client.EndConnect(_result);
+            }catch(SocketException e) {
+                // IL2CPP reports the raw errno instead of the mapped SocketError (111 = ECONNREFUSED on Linux/Android)
+                bool refused = e.SocketErrorCode == SocketError.ConnectionRefused || (int) e.SocketErrorCode == 111;
+                Log.Err(refused ? "Could not connect to server: connection refused, no server is listening on that address/port"
+                                : $"Could not connect to server: {e.SocketErrorCode}");
+                return;
+            }catch(ObjectDisposedException) {
+                return;
+            }
             // If the socket is already connected then stop
             if(!client.Connected) {
                 return;
