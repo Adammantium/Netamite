@@ -55,7 +55,7 @@ namespace NetamiteTest {
             Console.Clear();
 
             int length = options.Aggregate("", (max, cur) => max.Length > cur.Name.Length ? max : cur.Name).Length;
-
+            
             int offset_left = (Console.BufferWidth - length - 6) / 2;
 
             Console.WriteLine();

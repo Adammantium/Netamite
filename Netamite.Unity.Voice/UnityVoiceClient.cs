@@ -1,6 +1,6 @@
 ﻿using Netamite.Client.Definition;
 using Netamite.Logging;
-using Netamite.Unity.Voice.Codec;
+using Netamite.Voice.Codec;
 using Netamite.Unity.Voice.Audio;
 using Netamite.Unity.Voice.Packet;
 using System.Collections.Generic;
@@ -42,7 +42,7 @@ namespace Netamite.Unity.Voice {
 
             instance = this;
             this.client = client;
-            this.Codec = audioCodec ?? new G729Codec();
+            this.Codec = audioCodec ?? new OpusCodec();
             
             GameObject voiceReaderObj = new GameObject("VoiceReader");
             reader = voiceReaderObj.AddComponent<VoiceReader>();

@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{E45D0700-2294-4F46-AB99-907AA2757F5B}</ProjectGuid>
+    <ProjectGuid>{7B79CEED-5391-4335-AA21-D9054A930EAC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Netamite.Voice</RootNamespace>
@@ -82,8 +82,4 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetDir)$(TargetName).dll" "$(SolutionDir)..\\" /Y
-xcopy "$(TargetDir)$(TargetName).pdb" "$(SolutionDir)..\\" /Y</PostBuildEvent>
-  </PropertyGroup>
 </Project>

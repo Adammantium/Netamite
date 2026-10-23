@@ -1,10 +1,7 @@
 ﻿using System;
-using Netamite.Logging;
-using Netamite.Unity.Voice.Audio;
-using Netamite.Unity.Voice.Codec;
 using SIPSorcery.Media;
 
-namespace Netamite.Unity.Voice.Codec {
+namespace Netamite.Voice.Codec {
     public class G729Codec : AudioCodec {
 
         public string Name => "G.729 16kHz";
@@ -25,12 +22,6 @@ namespace Netamite.Unity.Voice.Codec {
 
         public byte[] Encode(byte[] data) {
             byte[] encoded = encoderState.Process(data);
-            
-#if MIRROR_BACK
-            var decoded = Decode(encoded);
-            NetamiteAudioSource nas = UnityVoiceClient.instance?.GetAudioPlayer(0);
-            nas.QueuePlay(decoded);
-#endif
             
             return encoded;
         }

@@ -1,4 +1,4 @@
-﻿namespace Netamite.Unity.Voice.Codec {
+﻿namespace Netamite.Voice.Codec {
     public class UncompressedCodec : AudioCodec {
         public string Name => "Uncompressed 16khz";
 

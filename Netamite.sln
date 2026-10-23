@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.TickingEngine", "N
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Unity.Voice", "Netamite.Unity.Voice\Netamite.Unity.Voice.csproj", "{E45D0700-2294-4F46-AB99-907AA2757F5B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Voice", "Netamite.Voice\Netamite.Voice.csproj", "{7B79CEED-5391-4335-AA21-D9054A930EAC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Netamite.Voice.Codec", "Netamite.Voice.Codec\Netamite.Voice.Codec.csproj", "{526BDC6F-8A1B-4236-9CC0-84F11D2322E0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +49,14 @@ Global
 		{E45D0700-2294-4F46-AB99-907AA2757F5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E45D0700-2294-4F46-AB99-907AA2757F5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E45D0700-2294-4F46-AB99-907AA2757F5B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{526BDC6F-8A1B-4236-9CC0-84F11D2322E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{526BDC6F-8A1B-4236-9CC0-84F11D2322E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{526BDC6F-8A1B-4236-9CC0-84F11D2322E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{526BDC6F-8A1B-4236-9CC0-84F11D2322E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B79CEED-5391-4335-AA21-D9054A930EAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B79CEED-5391-4335-AA21-D9054A930EAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B79CEED-5391-4335-AA21-D9054A930EAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B79CEED-5391-4335-AA21-D9054A930EAC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

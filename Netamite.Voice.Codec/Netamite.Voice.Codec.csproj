@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{526BDC6F-8A1B-4236-9CC0-84F11D2322E0}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Netamite.Voice.Codec</RootNamespace>
+    <AssemblyName>Netamite.Voice.Codec</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <!-- PARITY: Concentus bit-exact mode, same as its official builds -->
+    <DefineConstants>DEBUG;TRACE;PARITY</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;PARITY</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <!-- Only mscorlib/System on purpose: this assembly gets loaded by hosts (e.g. mod loaders) that can't resolve extra dependencies -->
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AudioCodec.cs" />
+    <Compile Include="G722Codec.cs" />
+    <Compile Include="G729Codec.cs" />
+    <Compile Include="Opus\BasicBufferShort.cs" />
+    <Compile Include="OpusCodec.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="sipsorcery\Codecs\G711Codecs.cs" />
+    <Compile Include="sipsorcery\Codecs\G722Codec.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\AcelpCo.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Bits.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\CodLd8k.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\CorFunc.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\DeAcelp.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\DecGain.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\DecLag3.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\DecLd8k.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Filter.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\FloatReference.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Gainpred.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\IntReference.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Ld8k.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Lpc.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Lpcfunc.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Lspdec.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Lspgetq.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Pitch.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Postfil.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\PostPro.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\PParity.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\PredLt3.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\PreProc.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Pwf.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\QuaGain.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\QuaLsp.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\TabLd8k.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Taming.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Codec\Util.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Decoder.cs" />
+    <Compile Include="sipsorcery\Codecs\G729Encoder.cs" />
+    <Compile Include="sipsorcery\Codecs\PcmResampler.cs" />
+    <Compile Include="UncompressedCodec.cs" />
+  </ItemGroup>
+  <!-- Concentus 1.1.7 (lostromb/concentus@4b1217e), fully managed Opus port, compiled in instead of referenced -->
+  <ItemGroup>
+    <Compile Include="Concentus\Celt\Bands.cs" />
+    <Compile Include="Concentus\Celt\CeltCommon.cs" />
+    <Compile Include="Concentus\Celt\CeltConstants.cs" />
+    <Compile Include="Concentus\Celt\CeltLPC.cs" />
+    <Compile Include="Concentus\Celt\CeltPitchXCorr.cs" />
+    <Compile Include="Concentus\Celt\CWRS.cs" />
+    <Compile Include="Concentus\Celt\Enums\Spread.cs" />
+    <Compile Include="Concentus\Celt\Kernels.cs" />
+    <Compile Include="Concentus\Celt\KissFFT.cs" />
+    <Compile Include="Concentus\Celt\Laplace.cs" />
+    <Compile Include="Concentus\Celt\MDCT.cs" />
+    <Compile Include="Concentus\Celt\Pitch.cs" />
+    <Compile Include="Concentus\Celt\QuantizeBands.cs" />
+    <Compile Include="Concentus\Celt\Rate.cs" />
+    <Compile Include="Concentus\Celt\Structs\AnalysisInfo.cs" />
+    <Compile Include="Concentus\Celt\Structs\CELTDecoder.cs" />
+    <Compile Include="Concentus\Celt\Structs\CeltEncoder.cs" />
+    <Compile Include="Concentus\Celt\Structs\CELTMode.cs" />
+    <Compile Include="Concentus\Celt\Structs\FFTState.cs" />
+    <Compile Include="Concentus\Celt\Structs\MDCTLookup.cs" />
+    <Compile Include="Concentus\Celt\Structs\PulseCache.cs" />
+    <Compile Include="Concentus\Celt\Tables.cs" />
+    <Compile Include="Concentus\Celt\VQ.cs" />
+    <Compile Include="Concentus\Common\Autocorrelation.cs" />
+    <Compile Include="Concentus\Common\CPlusPlus\Arrays.cs" />
+    <Compile Include="Concentus\Common\CPlusPlus\BoxedValue.cs" />
+    <Compile Include="Concentus\Common\CPlusPlus\Pointer.cs" />
+    <Compile Include="Concentus\Common\EntropyCoder.cs" />
+    <Compile Include="Concentus\Common\Inlines.cs" />
+    <Compile Include="Concentus\Common\Resampler.cs" />
+    <Compile Include="Concentus\Opus\Analysis.cs" />
+    <Compile Include="Concentus\Opus\CodecHelpers.cs" />
+    <Compile Include="Concentus\Opus\Downmix.cs" />
+    <Compile Include="Concentus\Opus\Enums\OpusApplication.cs" />
+    <Compile Include="Concentus\Opus\Enums\OpusBandwidth.cs" />
+    <Compile Include="Concentus\Opus\Enums\OpusControl.cs" />
+    <Compile Include="Concentus\Opus\Enums\OpusError.cs" />
+    <Compile Include="Concentus\Opus\Enums\OpusFramesize.cs" />
+    <Compile Include="Concentus\Opus\Enums\OpusMode.cs" />
+    <Compile Include="Concentus\Opus\Enums\OpusSignal.cs" />
+    <Compile Include="Concentus\Opus\MultiLayerPerceptron.cs" />
+    <Compile Include="Concentus\Opus\OpusCompare.cs" />
+    <Compile Include="Concentus\Opus\OpusConstants.cs" />
+    <Compile Include="Concentus\Opus\OpusException.cs" />
+    <Compile Include="Concentus\Opus\OpusMultistream.cs" />
+    <Compile Include="Concentus\Opus\Structs\ChannelLayout.cs" />
+    <Compile Include="Concentus\Opus\Structs\MLP.cs" />
+    <Compile Include="Concentus\Opus\Structs\OpusDecoder.cs" />
+    <Compile Include="Concentus\Opus\Structs\OpusEncoder.cs" />
+    <Compile Include="Concentus\Opus\Structs\OpusMSDecoder.cs" />
+    <Compile Include="Concentus\Opus\Structs\OpusMSEncoder.cs" />
+    <Compile Include="Concentus\Opus\Structs\OpusPacketInfo.cs" />
+    <Compile Include="Concentus\Opus\Structs\OpusRepacketizer.cs" />
+    <Compile Include="Concentus\Opus\Structs\StereoWidthState.cs" />
+    <Compile Include="Concentus\Opus\Structs\TonalityAnalysisState.cs" />
+    <Compile Include="Concentus\Opus\Structs\VorbisLayout.cs" />
+    <Compile Include="Concentus\Opus\Tables.cs" />
+    <Compile Include="Concentus\Silk\ApplySineWindow.cs" />
+    <Compile Include="Concentus\Silk\BurgModified.cs" />
+    <Compile Include="Concentus\Silk\BWExpander.cs" />
+    <Compile Include="Concentus\Silk\CNG.cs" />
+    <Compile Include="Concentus\Silk\CodeSigns.cs" />
+    <Compile Include="Concentus\Silk\CorrelateMatrix.cs" />
+    <Compile Include="Concentus\Silk\DecodeAPI.cs" />
+    <Compile Include="Concentus\Silk\DecodeCore.cs" />
+    <Compile Include="Concentus\Silk\DecodeIndices.cs" />
+    <Compile Include="Concentus\Silk\DecodeParameters.cs" />
+    <Compile Include="Concentus\Silk\DecodePitch.cs" />
+    <Compile Include="Concentus\Silk\DecodePulses.cs" />
+    <Compile Include="Concentus\Silk\EncodeAPI.cs" />
+    <Compile Include="Concentus\Silk\EncodeIndices.cs" />
+    <Compile Include="Concentus\Silk\EncodePulses.cs" />
+    <Compile Include="Concentus\Silk\Enums\DecoderAPIFlag.cs" />
+    <Compile Include="Concentus\Silk\Enums\SilkError.cs" />
+    <Compile Include="Concentus\Silk\Filters.cs" />
+    <Compile Include="Concentus\Silk\FindLPC.cs" />
+    <Compile Include="Concentus\Silk\FindLTP.cs" />
+    <Compile Include="Concentus\Silk\FindPitchLags.cs" />
+    <Compile Include="Concentus\Silk\FindPredCoefs.cs" />
+    <Compile Include="Concentus\Silk\GainQuantization.cs" />
+    <Compile Include="Concentus\Silk\HPVariableCutoff.cs" />
+    <Compile Include="Concentus\Silk\K2A.cs" />
+    <Compile Include="Concentus\Silk\LinearAlgebra.cs" />
+    <Compile Include="Concentus\Silk\LPCInversePredGain.cs" />
+    <Compile Include="Concentus\Silk\LTPAnalysisFilter.cs" />
+    <Compile Include="Concentus\Silk\LTPScaleControl.cs" />
+    <Compile Include="Concentus\Silk\NLSF.cs" />
+    <Compile Include="Concentus\Silk\NoiseShapeAnalysis.cs" />
+    <Compile Include="Concentus\Silk\PitchAnalysisCore.cs" />
+    <Compile Include="Concentus\Silk\PLC.cs" />
+    <Compile Include="Concentus\Silk\ProcessGains.cs" />
+    <Compile Include="Concentus\Silk\QuantizeLTPGains.cs" />
+    <Compile Include="Concentus\Silk\RegularizeCorrelations.cs" />
+    <Compile Include="Concentus\Silk\Resampler.cs" />
+    <Compile Include="Concentus\Silk\ResidualEnergy.cs" />
+    <Compile Include="Concentus\Silk\Schur.cs" />
+    <Compile Include="Concentus\Silk\ShellCoder.cs" />
+    <Compile Include="Concentus\Silk\Sigmoid.cs" />
+    <Compile Include="Concentus\Silk\SilkConstants.cs" />
+    <Compile Include="Concentus\Silk\Sort.cs" />
+    <Compile Include="Concentus\Silk\Stereo.cs" />
+    <Compile Include="Concentus\Silk\Structs\CNGState.cs" />
+    <Compile Include="Concentus\Silk\Structs\DecControlState.cs" />
+    <Compile Include="Concentus\Silk\Structs\EncControlState.cs" />
+    <Compile Include="Concentus\Silk\Structs\NLSFCodebook.cs" />
+    <Compile Include="Concentus\Silk\Structs\PLCStruct.cs" />
+    <Compile Include="Concentus\Silk\Structs\SideInfoIndices.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkChannelDecoder.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkChannelEncoder.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkDecoderControl.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkDecoder.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkEncoderControl.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkEncoder.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkLPState.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkNSQState.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkPrefilterState.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkResamplerState.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkShapeState.cs" />
+    <Compile Include="Concentus\Silk\Structs\SilkVADState.cs" />
+    <Compile Include="Concentus\Silk\Structs\StereoDecodeState.cs" />
+    <Compile Include="Concentus\Silk\Structs\StereoEncodeState.cs" />
+    <Compile Include="Concentus\Silk\Structs\TOCStruct.cs" />
+    <Compile Include="Concentus\Silk\SumSqrShift.cs" />
+    <Compile Include="Concentus\Silk\Tables.cs" />
+    <Compile Include="Concentus\Silk\TuningParameters.cs" />
+    <Compile Include="Concentus\Silk\VoiceActivityDetection.cs" />
+    <Compile Include="Concentus\Silk\VQ_WMat_EC.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Concentus\LICENSE" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

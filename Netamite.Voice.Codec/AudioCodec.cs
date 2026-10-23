@@ -1,4 +1,4 @@
-﻿namespace Netamite.Unity.Voice.Codec {
+﻿namespace Netamite.Voice.Codec {
     public interface AudioCodec {
 
         string Name { get; }
