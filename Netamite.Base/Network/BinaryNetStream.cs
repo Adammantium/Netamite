@@ -1,5 +1,6 @@
 ﻿using Netamite.Converter;
 using Netamite.Extension;
+using Netamite.Network.Packet;
 using Netamite.Network.Packet.Attributes;
 using System;
 using System.Collections.Generic;
@@ -93,6 +94,20 @@ namespace Netamite.Network {
             }
         }
 
+        /// <summary>
+        /// Same wire format as WriteArray with byte elements (ushort count, one byte each), but copies the array
+        /// in one go instead of boxing and converting every single byte, which produced ~200 bytes of garbage per byte
+        /// </summary>
+        public void WriteBytes(byte[] val) {
+            if(val == null) {
+                Write((ushort) 0);
+                return;
+            }
+
+            Write((ushort) val.Length);
+            buffer.AddRange(val);
+        }
+
         public void WriteRawFallback(object val) {
             using(var stream = new MemoryStream()) {
                 var formatter = new BinaryFormatter();
@@ -105,17 +120,18 @@ namespace Netamite.Network {
         }
 
         public void WriteRaw(object obj) {
-            MemberInfo[] myMembers = obj.GetType().GetMembers();//.OrderBy(m => m.Name).ToArray();
+            SyncedMember[] myMembers = SyncedMemberCache.Get(obj.GetType());
 
             for(int i = 0; i < myMembers.Length; i++) {
-                MemberInfo memberInfo = myMembers[i];
+                MemberInfo memberInfo = myMembers[i].Member;
+                SyncedVar syncedVar = myMembers[i].Attribute;
 
-                object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
+                if(syncedVar != null) {
+                    Type t = myMembers[i].Type;
 
-                if(atts.Length > 0) {
-                    Type t = memberInfo.GetUnderlyingType();
-
-                    if(t.IsArray) {
+                    if(t == typeof(byte[])) {
+                        WriteBytes((byte[]) memberInfo.GetValue(obj));
+                    } else if(t.IsArray) {
                         System.Collections.IList val = (System.Collections.IList) memberInfo.GetValue(obj);
 
                         if(val == null) {
@@ -124,12 +140,12 @@ namespace Netamite.Network {
                             object[] array = new object[val.Count];
                             val.CopyTo(array, 0);
 
-                            WriteArray(array, (atts[0] as SyncedVar).LowPrecision);
+                            WriteArray(array, syncedVar.LowPrecision);
                         }
                     } else {
                         object val = memberInfo.GetValue(obj);
 
-                        Write(val, (atts[0] as SyncedVar).LowPrecision);
+                        Write(val, syncedVar.LowPrecision);
                     }
                 }
             }
@@ -170,6 +186,21 @@ namespace Netamite.Network {
             return values;
         }
 
+        /// <summary>
+        /// Counterpart of WriteBytes, reads data written by WriteArray with byte elements as well
+        /// </summary>
+        public byte[] ReadBytes(bool moveReadPos = true) {
+            if(readPos + 2 > readableBuffer.Length) throw new Exception("Could not read value of type 'byte[]'!");
+            int length = BitConverter.ToUInt16(readableBuffer, readPos);
+            if(readPos + 2 + length > readableBuffer.Length) throw new Exception("Could not read value of type 'byte[]'!");
+
+            byte[] result = new byte[length];
+            Buffer.BlockCopy(readableBuffer, readPos + 2, result, 0, length);
+
+            if(moveReadPos) readPos += 2 + length;
+            return result;
+        }
+
         public object ReadRawFallback() {
             using(var stream = new MemoryStream(readableBuffer)) {
                 var formatter = new BinaryFormatter();
@@ -184,23 +215,25 @@ namespace Netamite.Network {
         }
 
         public object ReadRaw(Type type) {
-            MemberInfo[] myMembers = type.GetMembers();//.OrderBy(m => m.Name).ToArray();
+            SyncedMember[] myMembers = SyncedMemberCache.Get(type);
             object obj = Activator.CreateInstance(type);
 
             bool readAnything = false;
 
             for(int i = 0; i < myMembers.Length; i++) {
-                MemberInfo memberInfo = myMembers[i];
+                MemberInfo memberInfo = myMembers[i].Member;
+                SyncedVar syncedVar = myMembers[i].Attribute;
 
-                object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
-
-                if(atts.Length > 0) {
+                if(syncedVar != null) {
                     readAnything = true;
-                    Type t = memberInfo.GetUnderlyingType();
+                    Type t = myMembers[i].Type;
 
                     //try {
-                    if(t.IsArray) {
-                        object[] val = ReadArray(t.GetElementType(), (atts[0] as SyncedVar).LowPrecision);
+                    if(t == typeof(byte[])) {
+                        byte[] val = ReadBytes();
+                        if(val.Length > 0) memberInfo.SetValue(obj, val); // Empty arrays stay unset, like ReadArray
+                    } else if(t.IsArray) {
+                        object[] val = ReadArray(t.GetElementType(), syncedVar.LowPrecision);
 
                         if(val.Length > 0 && val[0] != null) {
                             Array filledArray = Array.CreateInstance(val[0].GetType(), val.Length);
@@ -209,7 +242,7 @@ namespace Netamite.Network {
                             memberInfo.SetValue(obj, filledArray);
                         }
                     } else {
-                        object val = Read(t, (atts[0] as SyncedVar).LowPrecision);
+                        object val = Read(t, syncedVar.LowPrecision);
 
                         memberInfo.SetValue(obj, val);
                     }

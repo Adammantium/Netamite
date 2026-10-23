@@ -9,7 +9,7 @@ namespace Netamite.Converter {
             Type converter = GetConverterForType(value.GetType());
 
             if(converter != null)
-                return (byte[]) converter.GetMethod("GetBytes").Invoke(null, new object[] { value, lowPrecision });
+                return (byte[]) GetConverterMethod(getBytesMethods, converter, "GetBytes").Invoke(null, new object[] { value, lowPrecision });
 
             throw new MissingDataConverterException(value.GetType());
         }
@@ -27,7 +27,7 @@ namespace Netamite.Converter {
                 object[] parameters = new object[] { value, bytesRead, startIndex, lowPrecision };
                 object result = null;
                 try {
-                    result = converter.GetMethod("FromBytes").Invoke(null, parameters);
+                    result = GetConverterMethod(fromBytesMethods, converter, "FromBytes").Invoke(null, parameters);
                 }catch(System.Reflection.TargetInvocationException ex) {
                     Logging.Log.Err(ex.InnerException);
                     throw ex;
@@ -41,6 +41,17 @@ namespace Netamite.Converter {
             throw new MissingDataConverterException(type);
         }
         
+        // GetMethod is a slow, allocating lookup and runs for every single value, so cache it per converter
+        private static readonly ConcurrentDictionary<Type, MethodInfo> getBytesMethods = new ConcurrentDictionary<Type, MethodInfo>();
+        private static readonly ConcurrentDictionary<Type, MethodInfo> fromBytesMethods = new ConcurrentDictionary<Type, MethodInfo>();
+
+        private static MethodInfo GetConverterMethod(ConcurrentDictionary<Type, MethodInfo> cache, Type converter, string name) {
+            MethodInfo method;
+            if(cache.TryGetValue(converter, out method)) return method;
+
+            return cache.GetOrAdd(converter, c => c.GetMethod(name));
+        }
+
         private static ConcurrentDictionary<Type, Type> converters = new ConcurrentDictionary<Type, Type>();
         private static Type GetConverterForType(Type to_find) {
             if(to_find.IsEnum) {

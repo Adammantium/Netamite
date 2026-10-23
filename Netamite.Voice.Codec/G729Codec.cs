@@ -4,7 +4,7 @@ using SIPSorcery.Media;
 namespace Netamite.Voice.Codec {
     public class G729Codec : AudioCodec {
 
-        public string Name => "G.729 16kHz";
+        public override string Name => "G.729 16kHz";
         
         private readonly G729Encoder encoderState;
         private readonly G729Decoder decoderState;
@@ -14,16 +14,20 @@ namespace Netamite.Voice.Codec {
             decoderState = new G729Decoder();
         }
 
-        public byte[] Decode(byte[] data) {
-            byte[] decoded = decoderState.Process(data);
-            
-            return decoded;
+        public override AudioCodec CreateNew() {
+            return new G729Codec();
         }
 
-        public byte[] Encode(byte[] data) {
-            byte[] encoded = encoderState.Process(data);
+        public override int Decode(byte[] data, ref byte[] outputBuffer) {
+            outputBuffer = decoderState.Process(data);
             
-            return encoded;
+            return outputBuffer.Length;
+        }
+
+        public override int Encode(byte[] data, ref byte[] outputBuffer) {
+            outputBuffer = encoderState.Process(data);
+            
+            return outputBuffer.Length;
         }
     }
 }

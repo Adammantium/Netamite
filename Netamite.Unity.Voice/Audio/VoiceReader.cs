@@ -2,8 +2,11 @@
 using Netamite.Unity.Voice.Packet;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Security;
+using System.Diagnostics;
+using System.Threading;
+using Debug = UnityEngine.Debug;
 
 namespace Netamite.Unity.Voice {
     public class VoiceReader : MonoBehaviour {
@@ -22,6 +25,9 @@ namespace Netamite.Unity.Voice {
         
         [Tooltip("How many packets should be held back to dont give latency for silence.")]
         [SerializeField] private int packet_holdback = 1;
+
+        [Tooltip("Most chunks that may wait for the processing thread. When the game stalls, older audio gets dropped instead of piling up as delay.")]
+        [SerializeField] private int maxQueuedChunks = 4;
 
         public delegate void onAudioPacketReady(UnityAudioPacket packet);
         public onAudioPacketReady OnAudioPacketReady;
@@ -54,10 +60,27 @@ namespace Netamite.Unity.Voice {
         // References
         private UnityVoiceClient voiceClient;
         private AudioClip microphoneClip;
-        private float[] sampleBuffer;
-        private byte[] pcmBuffer;
+        private int chunkSize;
         private int previousPosition = 0;
         private Coroutine processingCoroutine;
+
+        // Microphone.GetPosition and AudioClip.GetData only work on the main thread, so the coroutine just copies the
+        // samples out and everything else (conversion, encoding, sending) happens on this thread
+        private Thread processingThread;
+        private BlockingCollection<float[]> chunkQueue;
+        private readonly ConcurrentBag<float[]> freeChunks = new ConcurrentBag<float[]>();
+
+        /// <summary>
+        /// Logs once per second where the VoiceReader spends its time, to find out what causes lag
+        /// </summary>
+        public static bool LogPerformance = false;
+
+        // Performance counters, in Stopwatch ticks. Written by both threads, so only touched with Interlocked
+        private long perfMainTicks, perfMainMaxTicks, perfMainFrames;
+        private long perfChunks, perfDropped, perfSent;
+        private long perfConvertTicks, perfEncodeTicks, perfSendTicks, perfProcessMaxTicks;
+        private float perfNextLog;
+        private int perfGcCount;
 
         // State tracking
         private bool isCapturing = false;
@@ -105,14 +128,21 @@ namespace Netamite.Unity.Voice {
             // Wait for microphone to initialize
             while (Microphone.GetPosition(microphoneDeviceName) <= 0) { }
             previousPosition = Microphone.GetPosition(microphoneDeviceName);
-            buffer.Clear();
 
             // Prepare buffers - calculate appropriate buffer size based on capture frequency
             int samplesPerCapture = Mathf.CeilToInt(sampleRate * channels * captureFrequency);
-            sampleBuffer = new float[samplesPerCapture];
-            pcmBuffer = new byte[samplesPerCapture * 2]; // 16-bit = 2 bytes per sample
+            if (samplesPerCapture != chunkSize) {
+                while (freeChunks.TryTake(out _)) { } // Pooled chunks of the old size are useless now
+            }
+            chunkSize = samplesPerCapture;
 
             // Start processing
+            chunkQueue = new BlockingCollection<float[]>(new ConcurrentQueue<float[]>());
+            BlockingCollection<float[]> queue = chunkQueue;
+            byte[] pcmBuffer = new byte[samplesPerCapture * 2]; // 16-bit = 2 bytes per sample, one per thread
+            processingThread = new Thread(() => ProcessQueue(queue, pcmBuffer)) { IsBackground = true, Name = "VoiceReader" };
+            processingThread.Start();
+
             processingCoroutine = StartCoroutine(ProcessMicrophone());
             isCapturing = true;
 
@@ -131,6 +161,11 @@ namespace Netamite.Unity.Voice {
                 StopCoroutine(processingCoroutine);
                 processingCoroutine = null;
             }
+
+            // Lets the processing thread finish the queued chunks and exit
+            chunkQueue?.CompleteAdding();
+            chunkQueue = null;
+            processingThread = null;
 
             Microphone.End(microphoneDeviceName);
             microphoneClip = null;
@@ -179,45 +214,131 @@ namespace Netamite.Unity.Voice {
                     continue;
                 }
 
+                long frameStart = Stopwatch.GetTimestamp();
+
                 int currentPosition = Microphone.GetPosition(microphoneDeviceName);
                 int samplesAvailable = GetSamplesAvailable(currentPosition);
 
-                // Drain everything recorded since the last tick. WaitForSeconds overshoots by up to a frame,
-                // so reading only one chunk per tick lets the read position drift behind the mic (up to the clip length)
-                while (samplesAvailable >= sampleBuffer.Length) {
-                    microphoneClip.GetData(sampleBuffer, previousPosition);
-                    ProcessChunk();
-
-                    previousPosition = (previousPosition + sampleBuffer.Length) % microphoneClip.samples;
-                    samplesAvailable -= sampleBuffer.Length;
+                // The game stalled (loading, hitch): skip the old audio instead of sending it late,
+                // also keeps the read position from falling a whole clip length behind and reading overwritten audio
+                int maxBacklog = chunkSize * maxQueuedChunks;
+                if (samplesAvailable > maxBacklog) {
+                    previousPosition = (previousPosition + samplesAvailable - maxBacklog) % microphoneClip.samples;
+                    samplesAvailable = maxBacklog;
                 }
 
-                yield return new WaitForSeconds(captureFrequency);
+                // Only copy the samples here, the processing thread does the rest
+                while (samplesAvailable >= chunkSize) {
+                    float[] chunk = RentChunk();
+                    microphoneClip.GetData(chunk, previousPosition);
+
+                    previousPosition = (previousPosition + chunkSize) % microphoneClip.samples;
+                    samplesAvailable -= chunkSize;
+
+                    // Processing thread can't keep up, drop the oldest audio
+                    while (chunkQueue.Count >= maxQueuedChunks && chunkQueue.TryTake(out float[] dropped)) {
+                        freeChunks.Add(dropped);
+                        Interlocked.Increment(ref perfDropped);
+                    }
+                    chunkQueue.Add(chunk);
+                }
+
+                if (LogPerformance) {
+                    long frameTicks = Stopwatch.GetTimestamp() - frameStart;
+                    perfMainTicks += frameTicks;
+                    perfMainFrames++;
+                    if (frameTicks > perfMainMaxTicks) perfMainMaxTicks = frameTicks;
+                    LogPerformanceStats();
+                }
+
+                yield return null;
             }
         }
 
-        private void ProcessChunk() {
-            ConvertFloatToPCM16(sampleBuffer, pcmBuffer);
+        private static double Ms(long ticks) {
+            return ticks * 1000.0 / Stopwatch.Frequency;
+        }
+
+        // Main thread, once per second
+        private void LogPerformanceStats() {
+            if (Time.unscaledTime < perfNextLog) return;
+            bool first = perfNextLog == 0;
+            perfNextLog = Time.unscaledTime + 1f;
+
+            int gcCount = GC.CollectionCount(0);
+            int gcs = gcCount - perfGcCount;
+            perfGcCount = gcCount;
+
+            long chunks = Interlocked.Exchange(ref perfChunks, 0);
+            long sent = Interlocked.Exchange(ref perfSent, 0);
+            long dropped = Interlocked.Exchange(ref perfDropped, 0);
+            double convert = Ms(Interlocked.Exchange(ref perfConvertTicks, 0));
+            double encode = Ms(Interlocked.Exchange(ref perfEncodeTicks, 0));
+            double send = Ms(Interlocked.Exchange(ref perfSendTicks, 0));
+            double processMax = Ms(Interlocked.Exchange(ref perfProcessMaxTicks, 0));
+            double main = Ms(perfMainTicks), mainMax = Ms(perfMainMaxTicks);
+            long frames = perfMainFrames;
+            perfMainTicks = perfMainMaxTicks = perfMainFrames = 0;
+
+            if (first) return; // Counters only cover part of a second
+
+            Debug.Log($"[VoiceReader] {frames} fps | main thread {(frames > 0 ? main / frames : 0):F2} ms/frame (max {mainMax:F2}) | " +
+                      $"processing thread {chunks} chunks, {sent} sent, {dropped} dropped, per chunk: convert {(chunks > 0 ? convert / chunks : 0):F2} ms, " +
+                      $"encode {(sent > 0 ? encode / sent : 0):F2} ms, send {(sent > 0 ? send / sent : 0):F2} ms (slowest chunk {processMax:F2} ms) | " +
+                      $"GCs {gcs} | talking {talking}");
+        }
+
+        private float[] RentChunk() {
+            return freeChunks.TryTake(out float[] chunk) ? chunk : new float[chunkSize];
+        }
+
+        private void ProcessQueue(BlockingCollection<float[]> queue, byte[] pcmBuffer) {
+            buffer.Clear();
+
+            foreach (float[] chunk in queue.GetConsumingEnumerable()) {
+                long start = Stopwatch.GetTimestamp();
+                try {
+                    ProcessChunk(chunk, pcmBuffer);
+                } catch (Exception e) {
+                    Debug.LogException(e);
+                }
+                long ticks = Stopwatch.GetTimestamp() - start;
+
+                Interlocked.Increment(ref perfChunks);
+                long max;
+                while (ticks > (max = Interlocked.Read(ref perfProcessMaxTicks)) && Interlocked.CompareExchange(ref perfProcessMaxTicks, ticks, max) != max) { }
+
+                if (chunk.Length == chunkSize) freeChunks.Add(chunk);
+            }
+        }
+
+        // Runs on the processing thread, so OnAudioPacketReady and OnTalkingStateChanged get raised there as well
+        private void ProcessChunk(float[] samples, byte[] pcmBuffer) {
+            long start = Stopwatch.GetTimestamp();
+            ConvertFloatToPCM16(samples, pcmBuffer);
 
             float max = GetAudioPeak16bit(pcmBuffer, pcmBuffer.Length, MinVolumePeak);
             currentVolume = max;
+            Interlocked.Add(ref perfConvertTicks, Stopwatch.GetTimestamp() - start);
 
             if (max > MinVolumePeak || additional_samples > 0) {
                 if (max > MinVolumePeak) additional_samples = SampleSuffixCount;
                 else additional_samples--;
 
                 if (voiceClient == null) return;
+                start = Stopwatch.GetTimestamp();
                 UnityAudioPacket packet = new UnityAudioPacket(voiceClient.client.ClientId, voiceClient.Codec.Encode(pcmBuffer));
+                Interlocked.Add(ref perfEncodeTicks, Stopwatch.GetTimestamp() - start);
 
                 if (talking) {
-                    OnAudioPacketReady?.Invoke(packet);
+                    SendPacket(packet);
                     return;
                 }
 
                 buffer.Enqueue(packet);
                 if (buffer.Count > packet_holdback) {
                     while (buffer.Count > 0) {
-                        OnAudioPacketReady?.Invoke(buffer.Dequeue());
+                        SendPacket(buffer.Dequeue());
                     }
                     talking = true;
                     voiceClient.OnTalkingStateChanged?.Invoke(true);
@@ -228,6 +349,13 @@ namespace Netamite.Unity.Voice {
                 if (talking && voiceClient != null) voiceClient.OnTalkingStateChanged?.Invoke(false);
                 talking = false;
             }
+        }
+
+        private void SendPacket(UnityAudioPacket packet) {
+            long start = Stopwatch.GetTimestamp();
+            OnAudioPacketReady?.Invoke(packet);
+            Interlocked.Add(ref perfSendTicks, Stopwatch.GetTimestamp() - start);
+            Interlocked.Increment(ref perfSent);
         }
 
         private float GetAudioPeak16bit(byte[] buffer, int bytesRecorded, float threshold = 1f) {

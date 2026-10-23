@@ -1,13 +1,23 @@
-﻿namespace Netamite.Voice.Codec {
-    public class UncompressedCodec : AudioCodec {
-        public string Name => "Uncompressed 16khz";
+﻿using System;
 
-        public byte[] Decode(byte[] data) {
-            return data;
+namespace Netamite.Voice.Codec {
+    public class UncompressedCodec : AudioCodec {
+        public override string Name => "Uncompressed 16khz";
+
+        public override AudioCodec CreateNew() {
+            return new UncompressedCodec();
         }
 
-        public byte[] Encode(byte[] data) {
-            return data;
+        public override int Decode(byte[] data, ref byte[] outputBuffer) {
+            ensureOutputBufferSize(ref outputBuffer, data.Length);
+            Buffer.BlockCopy(data, 0, outputBuffer, 0, data.Length);
+            return data.Length;
+        }
+
+        public override int Encode(byte[] data, ref byte[] outputBuffer) {
+            ensureOutputBufferSize(ref outputBuffer, data.Length);
+            Buffer.BlockCopy(data, 0, outputBuffer, 0, data.Length);
+            return data.Length;
         }
     }
 }

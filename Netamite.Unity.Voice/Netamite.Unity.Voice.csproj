@@ -68,6 +68,7 @@
     <Compile Include="Audio\NetamiteAudioSource.cs" />
     <Compile Include="Packet\AudioPacket.cs" />
     <Compile Include="UnityVoiceClient.cs" />
+    <Compile Include="MainThreadPump.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Audio\VoiceReader.cs" />
   </ItemGroup>

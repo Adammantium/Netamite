@@ -4,7 +4,7 @@ using SIPSorcery.Media;
 namespace Netamite.Voice.Codec {
     public class G722Codec : AudioCodec {
 
-        public string Name => "G.722 16kHz";
+        public override string Name => "G.722 16kHz";
 
         private readonly int bitrate;
         private readonly G722CodecState encoderState;
@@ -18,31 +18,33 @@ namespace Netamite.Voice.Codec {
             codec = new SIPSorcery.Media.G722Codec();
         }
 
-        public byte[] Decode(byte[] data) {
-            short[] outputBuffer = new short[data.Length * 2];
+        public override AudioCodec CreateNew() {
+            return new G722Codec();
+        }
+
+        public override int Decode(byte[] data, ref byte[] outputBuffer) {
+            ensurePcmBufferSize(ref decodePcmBuffer, data.Length * 2);
             
-            int decoded = codec.Decode(decoderState, outputBuffer, data, data.Length);
+            int decoded = codec.Decode(decoderState, decodePcmBuffer, data, data.Length); // Number of samples
             
-            byte[] boutputBuffer = new byte[decoded];
-            Buffer.BlockCopy(outputBuffer, 0, boutputBuffer, 0, decoded);
+            ensureOutputBufferSize(ref outputBuffer, decoded * 2);
+            Buffer.BlockCopy(decodePcmBuffer, 0, outputBuffer, 0, decoded * 2);
 
             //Log.Debug($"decoded {decoded} | {outputBuffer.Length} | {boutputBuffer.Length}");
             
-            return boutputBuffer;
+            return decoded * 2;
         }
 
-        public byte[] Encode(byte[] data) {
-            byte[] outputBuffer = new byte[data.Length * 2];
-            short[] sdata = new short[(int)Math.Ceiling(data.Length / 2f)];
-            Buffer.BlockCopy(data, 0, sdata, 0, data.Length);
+        public override int Encode(byte[] data, ref byte[] outputBuffer) {
+            ensurePcmBufferSize(ref encodePcmBuffer, (int)Math.Ceiling(data.Length / 2f));
+            ensureOutputBufferSize(ref outputBuffer, data.Length);
             
-            int encoded = codec.Encode(encoderState, outputBuffer, sdata, data.Length / 2);
+            Buffer.BlockCopy(data, 0, encodePcmBuffer, 0, data.Length);
             
-            byte[] finalBuffer = new byte[encoded];
-            Array.Copy(outputBuffer, finalBuffer, encoded);
+            int encoded = codec.Encode(encoderState, outputBuffer, encodePcmBuffer, data.Length / 2);
             
             //Log.Debug($"encoded {encoded} | {sdata.Length} | {outputBuffer.Length} | {finalBuffer.Length}");
-            return finalBuffer;
+            return encoded;
         }
     }
 }

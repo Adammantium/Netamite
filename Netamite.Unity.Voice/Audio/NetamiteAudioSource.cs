@@ -26,6 +26,10 @@ namespace Netamite.Unity.Voice.Audio {
 
         private bool playing = false;
 
+        private void Awake() {
+            outputSampleRate = AudioSettings.outputSampleRate; // Main thread only, OnAudioFilterRead needs it on the audio thread
+        }
+
         public void Initialize(UnityVoiceClient voiceClient) {
             this.voiceClient = voiceClient;
         }
@@ -117,8 +121,8 @@ namespace Netamite.Unity.Voice.Audio {
             }
         }
 
+        // Main thread only, it creates the clip and starts the AudioSource
         internal void PlayAudio(byte[] voiceData) {
-            if (outputSampleRate == 0) outputSampleRate = AudioSettings.outputSampleRate; // Not accessible from the audio thread
 
             int maxSamples = SampleRate * MaxBufferMs / 1000;
 

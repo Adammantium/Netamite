@@ -93,21 +93,23 @@ namespace Netamite.Network.Packet {
             stream.Write(getPacketType());
 
             Type myType = GetType();
-            MemberInfo[] myMembers = myType.GetMembers();//.OrderBy(m => m.Name).ToArray();
+            SyncedMember[] myMembers = SyncedMemberCache.Get(myType);
 
             //Log.Debug("DEBUG", myType);
 
             BeforeProcessing();
 
             for(int i = 0; i < myMembers.Length; i++) {
-                MemberInfo memberInfo = myMembers[i];
+                MemberInfo memberInfo = myMembers[i].Member;
+                SyncedVar syncedVar = myMembers[i].Attribute;
 
-                object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
+                if(syncedVar != null) {
+                    Type t = myMembers[i].Type;
 
-                if(atts.Length > 0) {
-                    Type t = memberInfo.GetUnderlyingType();
-
-                    if(t.IsArray) {
+                    if(t == typeof(byte[])) {
+                        // Fast path, the generic array path boxes and converts every single byte
+                        stream.WriteBytes((byte[]) memberInfo.GetValue(this));
+                    } else if(t.IsArray) {
                         System.Collections.IList val = (System.Collections.IList) memberInfo.GetValue(this);
                         
                         if(val == null) {
@@ -120,7 +122,7 @@ namespace Netamite.Network.Packet {
                             Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
                             #endif
 
-                            stream.WriteArray(array, (atts[0] as SyncedVar).LowPrecision);
+                            stream.WriteArray(array, syncedVar.LowPrecision);
                         }
                     } else {
                         object val = memberInfo.GetValue(this);
@@ -129,7 +131,7 @@ namespace Netamite.Network.Packet {
                         Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
                         #endif
 
-                        stream.Write(val, (atts[0] as SyncedVar).LowPrecision);
+                        stream.Write(val, syncedVar.LowPrecision);
                     }
                 }
             }
@@ -154,21 +156,23 @@ namespace Netamite.Network.Packet {
             }
 
             Type myType = GetType();
-            MemberInfo[] myMembers = myType.GetMembers();//.OrderBy(m => m.Name).ToArray();
+            SyncedMember[] myMembers = SyncedMemberCache.Get(myType);
 
             //Log.Debug("DEBUG", myType);
 
             for (int i = 0; i < myMembers.Length; i++) {
-                MemberInfo memberInfo = myMembers[i];
-
-                object[] atts = memberInfo.GetCustomAttributes(typeof(SyncedVar), true);
+                MemberInfo memberInfo = myMembers[i].Member;
+                SyncedVar syncedVar = myMembers[i].Attribute;
                 
-                if(atts.Length > 0) {
-                    Type t = memberInfo.GetUnderlyingType();
+                if(syncedVar != null) {
+                    Type t = myMembers[i].Type;
 
                     try {
-                        if(t.IsArray) {
-                            object[] val = stream.ReadArray(t.GetElementType(), (atts[0] as SyncedVar).LowPrecision);
+                        if(t == typeof(byte[])) {
+                            byte[] val = stream.ReadBytes();
+                            if(val.Length > 0) memberInfo.SetValue(this, val); // Empty arrays stay unset, like ReadArray
+                        } else if(t.IsArray) {
+                            object[] val = stream.ReadArray(t.GetElementType(), syncedVar.LowPrecision);
                             
                             if(val.Length > 0 && val[0] != null) {
                                 Array filledArray = Array.CreateInstance(val[0].GetType(), val.Length);
@@ -181,7 +185,7 @@ namespace Netamite.Network.Packet {
                                 memberInfo.SetValue(this, filledArray);
                             }
                         } else {
-                            object val = stream.Read(t, (atts[0] as SyncedVar).LowPrecision);
+                            object val = stream.Read(t, syncedVar.LowPrecision);
 
                             #if DEBUG_MESSAGES
                             Log.Debug("DEBUG", memberInfo.Name + "\t" + t + "\t" + val);
@@ -201,7 +205,8 @@ namespace Netamite.Network.Packet {
         }
 
         public byte getPacketType() {
-            return getPacketType(GetType());
+            PacketDefinition definition = SyncedMemberCache.GetPacketDefinition(GetType());
+            return definition != null ? definition.packetType : (byte) PacketType.UNKNOWN;
         }
 
         private static byte getPacketType(Type type) {
@@ -217,11 +222,8 @@ namespace Netamite.Network.Packet {
         }
 
         public bool IsReliable() {
-            Attribute attribute = GetType().GetCustomAttribute(typeof(PacketDefinition), true);
-            if(attribute != null) {
-                return ((PacketDefinition) attribute).reliable;
-            }
-            return true;
+            PacketDefinition definition = SyncedMemberCache.GetPacketDefinition(GetType());
+            return definition != null ? definition.reliable : true;
         }
 
         public void Dispose() { }

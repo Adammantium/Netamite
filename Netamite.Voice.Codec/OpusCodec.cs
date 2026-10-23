@@ -9,7 +9,7 @@ namespace Netamite.Voice.Codec {
     /// so there are no native libraries or extra assemblies that a host (e.g. a mod loader) has to resolve.
     /// </summary>
     public class OpusCodec : AudioCodec {
-        public string Name => "Opus";
+        public override string Name => "Opus";
 
         private int _bitrate = 16;
         private int _complexity = 5;
@@ -38,6 +38,17 @@ namespace Netamite.Voice.Codec {
             SetComplexity(_complexity);
             SetVBRMode(_vbr, _cvbr);
             _decoder = OpusDecoder.Create(sampleRate, 1);
+        }
+
+        public override AudioCodec CreateNew() {
+            OpusCodec codec = new OpusCodec(_sampleRate);
+            codec.SetBitrate(_bitrate);
+            codec.SetComplexity(_complexity);
+            codec.SetFrameSize(_frameSize);
+            codec.SetPacketLoss(_packetLoss);
+            codec.SetApplication(_application);
+            codec.SetVBRMode(_vbr, _cvbr);
+            return codec;
         }
 
         public void SetBitrate(int bitrate) {
@@ -81,7 +92,7 @@ namespace Netamite.Voice.Codec {
             return (int)(_sampleRate * _frameSize / 1000);
         }
 
-        public byte[] Encode(byte[] data) {
+        public override int Encode(byte[] data, ref byte[] outputBuffer) {
             int frameSize = GetFrameSize();
 
             if (data != null) {
@@ -108,43 +119,44 @@ namespace Netamite.Voice.Codec {
                 outCursor += 2 + frameBytes;
             }
 
-            byte[] finalOutput = new byte[outCursor];
-            Array.Copy(scratchBuffer, 0, finalOutput, 0, outCursor);
-            return finalOutput;
+            ensureOutputBufferSize(ref outputBuffer, outCursor);
+            Array.Copy(scratchBuffer, 0, outputBuffer, 0, outCursor);
+            return outCursor;
         }
 
-        public byte[] Decode(byte[] data) {
+        public override int Decode(byte[] data, ref byte[] outputBuffer) {
             int frameSize = GetFrameSize();
 
             bool lostPacket = new Random().Next(0, 100) < _packetLoss || data == null;
             if (lostPacket) {
                 // packet loss path, null input makes the decoder conceal the missing frame
-                short[] concealed = new short[frameSize];
-                _decoder.Decode(null, 0, 0, concealed, 0, frameSize, false);
-                return ToBytes(concealed, frameSize);
+                ensurePcmBufferSize(ref decodePcmBuffer, frameSize);
+                int concealed = _decoder.Decode(null, 0, 0, decodePcmBuffer, 0, frameSize, false);
+                ensureOutputBufferSize(ref outputBuffer, concealed * 2);
+                Buffer.BlockCopy(decodePcmBuffer, 0, outputBuffer, 0, concealed * 2);
+                return concealed * 2;
             }
 
             // Count the length prefixed frames first, to decode straight into one buffer
             int frames = 0;
             for (int cursor = 0; cursor + 2 <= data.Length; cursor += 2 + (data[cursor] | (data[cursor + 1] << 8))) frames++;
 
-            short[] outputBuffer = new short[frames * frameSize];
+            ensurePcmBufferSize(ref decodePcmBuffer, frames * frameSize);
+            
             int samples = 0;
             for (int cursor = 0; cursor + 2 <= data.Length;) {
                 int frameBytes = data[cursor] | (data[cursor + 1] << 8);
                 if (cursor + 2 + frameBytes > data.Length) break; // Truncated packet
 
-                samples += _decoder.Decode(data, cursor + 2, frameBytes, outputBuffer, samples, frameSize, false);
+                samples += _decoder.Decode(data, cursor + 2, frameBytes, decodePcmBuffer, samples, frameSize, false);
                 cursor += 2 + frameBytes;
             }
 
-            return ToBytes(outputBuffer, samples);
+            ensureOutputBufferSize(ref outputBuffer, samples * 2);
+            Buffer.BlockCopy(decodePcmBuffer, 0, outputBuffer, 0, samples * 2);
+            
+            return samples * 2;
         }
 
-        private static byte[] ToBytes(short[] samples, int count) {
-            byte[] output = new byte[count * 2];
-            Buffer.BlockCopy(samples, 0, output, 0, output.Length);
-            return output;
-        }
     }
 }
