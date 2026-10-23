@@ -102,10 +102,144 @@ public override bool ProcessServer(NetamiteServer server, ClientData client) {
 ##### Use a Global Handler
 You can attach to the `OnDataReceived` event to handle packets globally.
 
-## Client Side Initialization
-To initialize the client you need to create the corresponding client class for your platform.
-```C#
+## Server Side Initialization
+Create the server for the transmission layer you want to use, attach to the events you need and start it.
 
+### TCP/UDP
+`IPServer` listens on TCP and UDP. By default both use the same port (13698), you can change them with `TcpPort` and `UdpPort`.
+```C#
+NetamiteServer server = new IPServer(12345, 16); // port, max clients
+
+server.ConnectToken = "my password";   // optional, clients need to supply the same token to join
+server.ClientTimeoutDelay = 30000;     // optional, ms without a packet before a client gets kicked
+
+server.OnStart        += (delay) => Log.Info($"Server started after {delay}ms");
+server.OnStartupError += (error) => Log.Err($"Server could not start: {error}");
+server.OnConnect      += (client) => Log.Info($"{client.ClientName} joined");
+server.OnDisconnect   += (client, reason) => Log.Info($"{client.ClientName} left: {reason}");
+
+// Called for every packet that doesn't handle itself in ProcessServer
+server.OnDataReceived += (client, packet) => { };
+
+server.Start();
+```
+Stop it again with `server.Stop()`, connected clients will get disconnected with `DisconnectReason.SERVER_CLOSED`.
+
+### Steam
+`SteamServer` creates a Steam lobby that the clients join. Steam has to be initialized before (see [Steam](#steam)).
+```C#
+NetamiteServer server = new SteamServer(16, true); // max clients, friends only
+server.Start();
+
+// Once OnStart was called, the lobby id is available and can be shared with the clients
+ulong lobbyId = ((SteamServer) server).currentLobby.LobbyId.m_SteamID;
 ```
 
-## Server Side Initialization
+### Sending packets from the server
+```C#
+server.SendTo(clientId, packet);                   // to a single client (also accepts a ClientInformation)
+server.SendToAll(packet);                          // to every client
+server.SendToAllExcept(packet, client.ClientId);   // to everyone except the given client ids
+```
+`SendTo...` picks the reliable or unreliable channel based on the packets `PacketDefinition`. To force a channel, use the `SendReliable...` / `SendUnreliable...` variants.  
+All connected clients are available through `server.Clients`, a single one through `server.GetClientById(id)`.
+
+## Client Side Initialization
+Create the client for the transmission layer the server uses, attach to the events and connect.
+
+### TCP/UDP
+`IPClient` accepts an IP address or a hostname.
+```C#
+NetamiteClient client = new IPClient("127.0.0.1", 12345);
+client.ClientName = "Player";
+
+client.OnConnect         += () => Log.Info($"Connected with id {client.ClientId}");
+client.OnConnectionError += (error) => Log.Err($"Could not connect: {error}");
+client.OnDisconnect      += (reason) => Log.Info($"Disconnected: {reason}");
+
+// Called for every packet that doesn't handle itself in ProcessClient
+client.OnDataReceived += (packet) => { };
+
+client.Connect("my password"); // the servers ConnectToken, leave empty if it has none
+```
+Connecting happens in the background, wait for `OnConnect` before sending packets.  
+Disconnect with `client.Disconnect()`.
+
+### Steam
+```C#
+NetamiteClient client = new SteamClient(lobbyId);
+client.Connect();
+```
+Players that join through the Steam overlay or accept an invite are handled by `SteamIntegration.OnOverlayJoin`, which hands you an already created `SteamClient`:
+```C#
+SteamIntegration.OnOverlayJoin += (steamClient) => {
+    // attach your events, then
+    steamClient.Connect();
+};
+```
+
+### Sending packets from the client
+```C#
+client.Send(new MyCustomPacket() { my_string = "Hello" });
+```
+Like on the server, `Send` picks the channel based on the `PacketDefinition`, `SendReliable` / `SendUnreliable` force one.  
+Packets are reliable by default, to make one unreliable (e.g. for positions that get sent all the time) pass `false` first:
+```C#
+[PacketDefinition(false, (byte) 11)]
+public class MyPositionPacket : MyBasePacket {
+```
+Some useful values while connected: `client.Ping` (ms) and `client.FixedTimestamp` (a timestamp synchronized with the server).
+
+## Steam
+Netamite.Steam uses [Steamworks.NET](https://github.com/rlabrecque/Steamworks.NET), the game needs to ship it. Initialize Steam once before creating a `SteamServer` or `SteamClient`:
+```C#
+SteamIntegration.OnInitialized += () => Log.Info($"Steam ready, logged in as {SteamIntegration.Username}");
+SteamIntegration.OnError       += (e) => Log.Err(e);
+
+SteamIntegration.Initialize(yourAppId);
+```
+By default a thread runs the Steam callbacks for you. If you call `SteamIntegration.Initialize(yourAppId, false)` instead, call `SteamIntegration.RunCallbacks()` regularly yourself (e.g. every frame).  
+Call `SteamIntegration.Shutdown()` when the game closes.
+
+## Unity
+Reference `Netamite.Unity` to be able to use `Vector3`, `Quaternion` and `Color` in `SyncedVar` fields:
+```C#
+[SyncedVar(true)] public Vector3 position;
+[SyncedVar(true)] public Quaternion rotation;
+```
+
+## Voice Chat (Unity)
+`Netamite.Unity.Voice` records the microphone, encodes it, sends it to the other players and plays back what it receives. The codecs live in `Netamite.Voice.Codec`, so ship both dlls.
+```C#
+UnityVoiceClient voiceClient = new UnityVoiceClient(client); // uses Opus by default
+voiceClient.Start();
+```
+Create it after the client connected, there can only be one at a time, creating a new one stops the old one.  
+The server relays the voice packets on its own, it only needs `Netamite.Unity.Voice` to be loaded, so it knows the packet.
+
+Some of the things you can configure:
+```C#
+voiceClient.SetInputDevice(VoiceReader.AvailableMicrophoneDevices[0]); // default microphone if not set
+voiceClient.SetRecordingThreshold(0.4f);   // volume (0-1) the microphone has to reach before anything gets sent
+voiceClient.SetVolume(0.8f);               // playback volume of every player
+voiceClient.SetClientVolume(clientId, 1f); // playback volume of one player
+voiceClient.SetClientMute(clientId, true);
+voiceClient.SetProximity(true);            // 3D sound, position the players audio source with GetAudioPlayer(clientId)
+voiceClient.UseMic = false;                // only listen
+```
+`OnTalkingStateChanged` tells you when the local player starts or stops talking, e.g. to show an indicator.
+
+To use a different codec, pass it in. All players need to use the same one:
+```C#
+new UnityVoiceClient(client, new G722Codec());
+```
+Available codecs are `OpusCodec`, `G722Codec`, `G729Codec` and `UncompressedCodec`, or implement `AudioCodec` yourself.
+
+# Third-Party Code
+-----------------
+`Netamite.Voice.Codec` contains source code from the following projects. It is compiled directly into the assembly, so no extra dependencies are needed, but the code is not my own work. All credit goes to the original authors.
+
+- **[Concentus](https://github.com/lostromb/concentus)** by Logan Stromberg, a managed C# port of the Opus codec (libopus), used for `OpusCodec`.  
+  Located in `Netamite.Voice.Codec/Concentus`, version 1.1.7. Licensed under the BSD-style license in `Netamite.Voice.Codec/Concentus/LICENSE`.
+- **[SIPSorcery](https://github.com/sipsorcery-org/sipsorcery)**, its codec implementations (G.711, G.722, G.729 and the PCM resampler), used for `G722Codec` and `G729Codec`.  
+  Located in `Netamite.Voice.Codec/sipsorcery`. These files are based on further projects (SpanDSP, NAudio, Jitsi) and keep their original copyright and license notices in the file headers.

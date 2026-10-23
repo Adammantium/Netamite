@@ -17,22 +17,27 @@ namespace Netamite.Voice.Codec {
         private int _packetLoss = 0;
         private bool _vbr = false;
         private bool _cvbr = false;
-        private OpusApplication _application = OpusApplication.OPUS_APPLICATION_AUDIO;
+        private OpusApplication _application = OpusApplication.OPUS_APPLICATION_VOIP;
 
-        private BasicBufferShort _incomingSamples = new BasicBufferShort(48000);
+        private readonly int _sampleRate;
+        private BasicBufferShort _incomingSamples;
 
         private OpusEncoder _encoder;
         private OpusDecoder _decoder;
 
         private byte[] scratchBuffer = new byte[10000];
 
-        public OpusCodec() {
-            _encoder = OpusEncoder.Create(48000, 1, _application);
+        /// <param name="sampleRate">Sample rate of the PCM data, has to match the recording/playback (VoiceReader records at 16000).
+        /// Opus supports 8000, 12000, 16000, 24000 and 48000</param>
+        public OpusCodec(int sampleRate = 16000) {
+            _sampleRate = sampleRate;
+            _incomingSamples = new BasicBufferShort(sampleRate); // One second of audio
+            _encoder = OpusEncoder.Create(sampleRate, 1, _application);
 
             SetBitrate(_bitrate);
             SetComplexity(_complexity);
             SetVBRMode(_vbr, _cvbr);
-            _decoder = OpusDecoder.Create(48000, 1);
+            _decoder = OpusDecoder.Create(sampleRate, 1);
         }
 
         public void SetBitrate(int bitrate) {
@@ -73,7 +78,7 @@ namespace Netamite.Voice.Codec {
         }
 
         private int GetFrameSize() {
-            return (int)(48000 * _frameSize / 1000);
+            return (int)(_sampleRate * _frameSize / 1000);
         }
 
         public byte[] Encode(byte[] data) {
@@ -91,34 +96,54 @@ namespace Netamite.Voice.Codec {
                 }
             }
 
-            int packetSize = 0;
+            // Encode every complete frame, the input chunks (e.g. 50ms from the VoiceReader) don't line up with the
+            // Opus frame sizes and leftover samples would otherwise pile up. Each frame is prefixed with its length
+            int outCursor = 0;
 
-            if (_incomingSamples.Available() >= frameSize) {
+            while (_incomingSamples.Available() >= frameSize) {
                 short[] nextFrameData = _incomingSamples.Read(frameSize);
-                packetSize = _encoder.Encode(nextFrameData, 0, frameSize, scratchBuffer, 0, scratchBuffer.Length);
+                int frameBytes = _encoder.Encode(nextFrameData, 0, frameSize, scratchBuffer, outCursor + 2, scratchBuffer.Length - outCursor - 2);
+                scratchBuffer[outCursor] = (byte) frameBytes;
+                scratchBuffer[outCursor + 1] = (byte) (frameBytes >> 8);
+                outCursor += 2 + frameBytes;
             }
 
-            byte[] finalOutput = new byte[packetSize];
-            Array.Copy(scratchBuffer, 0, finalOutput, 0, packetSize);
+            byte[] finalOutput = new byte[outCursor];
+            Array.Copy(scratchBuffer, 0, finalOutput, 0, outCursor);
             return finalOutput;
         }
 
         public byte[] Decode(byte[] data) {
             int frameSize = GetFrameSize();
 
-            short[] outputBuffer = new short[frameSize];
-
             bool lostPacket = new Random().Next(0, 100) < _packetLoss || data == null;
-            if (!lostPacket) {
-                // Normal decoding
-                _decoder.Decode(data, 0, data.Length, outputBuffer, 0, frameSize, false);
-            } else {
+            if (lostPacket) {
                 // packet loss path, null input makes the decoder conceal the missing frame
-                _decoder.Decode(null, 0, 0, outputBuffer, 0, frameSize, false);
+                short[] concealed = new short[frameSize];
+                _decoder.Decode(null, 0, 0, concealed, 0, frameSize, false);
+                return ToBytes(concealed, frameSize);
             }
 
-            byte[] output = new byte[outputBuffer.Length * 2];
-            Buffer.BlockCopy(outputBuffer, 0, output, 0, output.Length);
+            // Count the length prefixed frames first, to decode straight into one buffer
+            int frames = 0;
+            for (int cursor = 0; cursor + 2 <= data.Length; cursor += 2 + (data[cursor] | (data[cursor + 1] << 8))) frames++;
+
+            short[] outputBuffer = new short[frames * frameSize];
+            int samples = 0;
+            for (int cursor = 0; cursor + 2 <= data.Length;) {
+                int frameBytes = data[cursor] | (data[cursor + 1] << 8);
+                if (cursor + 2 + frameBytes > data.Length) break; // Truncated packet
+
+                samples += _decoder.Decode(data, cursor + 2, frameBytes, outputBuffer, samples, frameSize, false);
+                cursor += 2 + frameBytes;
+            }
+
+            return ToBytes(outputBuffer, samples);
+        }
+
+        private static byte[] ToBytes(short[] samples, int count) {
+            byte[] output = new byte[count * 2];
+            Buffer.BlockCopy(samples, 0, output, 0, output.Length);
             return output;
         }
     }
