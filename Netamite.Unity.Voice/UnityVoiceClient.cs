@@ -75,6 +75,10 @@ namespace Netamite.Unity.Voice {
         }
 
         private void CheckClient(int clientId) {
+            if(audioPlayers.ContainsKey(clientId) && audioPlayers[clientId] == null) {
+                audioPlayers.Remove(clientId);
+            }
+
             if(!audioPlayers.ContainsKey(clientId)) {
                 GameObject gameObject = new GameObject("AudioSource" + clientId);
                 NetamiteAudioSource player = gameObject.AddComponent<NetamiteAudioSource>();
