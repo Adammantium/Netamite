@@ -11,7 +11,7 @@ namespace Netamite.Voice.Codec {
     public class OpusCodec : AudioCodec {
         public string Name => "Opus";
 
-        private int _bitrate = 64;
+        private int _bitrate = 16;
         private int _complexity = 5;
         private double _frameSize = 20;
         private int _packetLoss = 0;

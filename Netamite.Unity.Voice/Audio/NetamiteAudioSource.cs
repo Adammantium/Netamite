@@ -79,6 +79,27 @@ namespace Netamite.Unity.Voice.Audio {
         }
         
         
+        /// <summary>
+        /// Sample rate of the decoded voice data
+        /// </summary>
+        public int SampleRate = 16000;
+
+        /// <summary>
+        /// How much audio (ms) gets buffered before playback starts, absorbs network jitter. Higher = smoother but more delay
+        /// </summary>
+        public int JitterBufferMs = 60;
+
+        /// <summary>
+        /// Most audio (ms) that may be queued. When more piles up (network bursts, clock drift), the oldest audio gets
+        /// dropped so the delay can't grow over time
+        /// </summary>
+        public int MaxBufferMs = 200;
+
+        /// <summary>
+        /// Gain applied to the voice before playback
+        /// </summary>
+        public float Gain = 10f;
+
         internal Queue<float> audioBuffer = new Queue<float>();
 
         public void UpdateAudioSource() {
@@ -97,62 +118,112 @@ namespace Netamite.Unity.Voice.Audio {
         }
 
         internal void PlayAudio(byte[] voiceData) {
-            float[] floatData = new float[voiceData.Length / 2];
-            for (int i = 0; i < floatData.Length; i++) {
-                short sample = (short)(voiceData[i * 2] | (voiceData[i * 2 + 1] << 8));
-                floatData[i] = sample / 32768.0f;
-            }
+            if (outputSampleRate == 0) outputSampleRate = AudioSettings.outputSampleRate; // Not accessible from the audio thread
+
+            int maxSamples = SampleRate * MaxBufferMs / 1000;
 
             lock (audioBuffer) {
-                foreach (var sample in floatData) {
-                    audioBuffer.Enqueue(sample);
+                for (int i = 0; i + 1 < voiceData.Length; i += 2) {
+                    short sample = (short)(voiceData[i] | (voiceData[i + 1] << 8));
+                    audioBuffer.Enqueue(sample / 32768.0f);
                 }
+
+                while (audioBuffer.Count > maxSamples) audioBuffer.Dequeue();
             }
-            
+
             if (AudioSource.clip == null) {
+                // Constant 1.0 carrier, Unity applies volume and 3D panning/attenuation to it before OnAudioFilterRead,
+                // multiplying the voice onto it keeps proximity working
+                AudioClip carrier = AudioClip.Create("VoiceCarrier", outputSampleRate, 1, outputSampleRate, false);
+                float[] ones = new float[outputSampleRate];
+                for (int i = 0; i < ones.Length; i++) ones[i] = 1f;
+                carrier.SetData(ones, 0);
+
                 AudioSource.loop = true;
-                AudioSource.clip = AudioClip.Create("StreamingClip", 16000 * 2, 1, 16000, true, OnAudioFilterRead);
+                AudioSource.clip = carrier;
             }
-            
+
             if (!AudioSource.isPlaying)
                 AudioSource.Play();
         }
-        
-        void OnAudioFilterRead(float[] data) {
+
+        private int outputSampleRate = 0;
+        private bool buffering = true;
+        private float resamplePosition = 0f; // Fraction between previousSample and nextSample
+        private float previousSample = 0f;
+        private float nextSample = 0f;
+
+        // Runs on the audio thread for every block the output device needs, so playback only lags by one DSP buffer
+        private void OnAudioFilterRead(float[] data, int channels) {
+            if (outputSampleRate == 0) {
+                Array.Clear(data, 0, data.Length);
+                return;
+            }
+
+            float step = (float) SampleRate / outputSampleRate;
+            int jitterSamples = SampleRate * JitterBufferMs / 1000;
+            float levelScale = muted ? 0f : volume;
+            float blockPeak = 0f;
+            float blockSquares = 0f;
+            int frames = data.Length / channels;
+
             lock (audioBuffer) {
-                for (int i = 0; i < data.Length; i++) {
-                    if (audioBuffer.Count > 0) {
-                        data[i] = Math.Min(1, audioBuffer.Dequeue() * 10f);
-                    } else {
-                        data[i] = 0f; // Fill with silence if buffer is empty
+                if (buffering && audioBuffer.Count >= jitterSamples) buffering = false;
+
+                for (int i = 0; i < data.Length; i += channels) {
+                    float value = 0f;
+
+                    if (!buffering) {
+                        // Linear interpolation from the voice sample rate to the output sample rate
+                        resamplePosition += step;
+                        while (resamplePosition >= 1f) {
+                            resamplePosition -= 1f;
+                            previousSample = nextSample;
+
+                            if (audioBuffer.Count > 0) {
+                                nextSample = audioBuffer.Dequeue();
+                            } else {
+                                // Ran dry, wait for the jitter buffer to fill up again instead of crackling
+                                nextSample = 0f;
+                                buffering = true;
+                            }
+                        }
+                        value = previousSample + (nextSample - previousSample) * resamplePosition;
+                        value = Mathf.Clamp(value * Gain, -1f, 1f);
                     }
+
+                    float level = Math.Abs(value) * levelScale;
+                    if (level > blockPeak) blockPeak = level;
+                    blockSquares += level * level;
+
+                    for (int c = 0; c < channels; c++) data[i + c] *= value;
                 }
             }
+
+            currentPeak = blockPeak;
+            currentRms = frames > 0 ? (float) Math.Sqrt(blockSquares / frames) : 0f;
         }
         
-        private readonly float[] samples = new float[256];
-        public float GetPeak() {
-            if (AudioSource == null || !AudioSource.isPlaying) return 0f;
+        // Measured in OnAudioFilterRead over the last audio block. AudioSource.GetOutputData can't be used, it only
+        // sees the constant carrier clip, not the voice that gets multiplied onto it
+        private volatile float currentPeak = 0f;
+        private volatile float currentRms = 0f;
 
-            float peak = 0f;
-            for (int channel = 0; channel < AudioSource.clip.channels; channel++) {
-                AudioSource.GetOutputData(samples, channel);
-                for (int i = 0; i < samples.Length; i++) {
-                    float abs = Mathf.Abs(samples[i]);
-                    if (abs > peak) peak = abs;
-                }
-            }
-            return peak;
+        /// <summary>
+        /// Peak level (0-1) of the voice that is currently playing, including volume and mute but without 3D attenuation
+        /// </summary>
+        public float GetPeak() {
+            if (audioSource == null || !audioSource.isPlaying) return 0f;
+            return currentPeak;
         }
         
         // RMS (average loudness) jitters less than the peak, usually looks better for lip sync
+        /// <summary>
+        /// RMS level (0-1) of the voice that is currently playing, including volume and mute but without 3D attenuation
+        /// </summary>
         public float GetRms() {
-            if (AudioSource == null || !AudioSource.isPlaying) return 0f;
-
-            AudioSource.GetOutputData(samples, 0);
-            float sum = 0f;
-            for (int i = 0; i < samples.Length; i++) sum += samples[i] * samples[i];
-            return Mathf.Sqrt(sum / samples.Length);
+            if (audioSource == null || !audioSource.isPlaying) return 0f;
+            return currentRms;
         }
     }
 }
