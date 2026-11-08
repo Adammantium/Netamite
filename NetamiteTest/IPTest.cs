@@ -13,7 +13,7 @@ namespace NetamiteTest {
     internal class IPTest {
 
         internal static void DoTest() {
-            short port = 12345;
+            ushort port = 12345;
 
             NetamiteServer server = new IPServer(port);
             server.OnConnect += (ci) => {
@@ -48,7 +48,7 @@ namespace NetamiteTest {
             server.Stop();
         }
 
-        private static void Connect(int id, string address, short port) {
+        private static void Connect(int id, string address, ushort port) {
             Thread.Sleep(id * 200);
             NetamiteClient client = new IPClient(address, port);
             client.ClientName = "Client " + id;

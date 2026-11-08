@@ -10,7 +10,7 @@ namespace Netamite.Network.Socket {
     internal class UdpSocket : NetSocket {
 
         internal IPEndPoint endPoint;
-        private UdpClient client;
+        internal UdpClient client;
 
         public override string TYPE => "UDP";
         public override bool IsConnected => true;

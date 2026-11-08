@@ -17,25 +17,25 @@ namespace Netamite.Server.Implementation {
     public class IPServer : NetamiteServer {
 
         private string _bindingAddress = "0.0.0.0";
-        private short tcpPort = 13698;
-        private short udpPort = 13698;
+        private ushort tcpPort = 13698;
+        private ushort udpPort = 13698;
         /// <summary>
         /// Sets the Port for both the TCP and UDP connection
         /// </summary>
-        public short Port {
+        public ushort Port {
             set { tcpPort = value; udpPort = value; }
         }
         /// <summary>
         /// Sets and Gets the Port for the TCP connection
         /// </summary>
-        public short TcpPort {
+        public ushort TcpPort {
             set { tcpPort = value; }
             get { return tcpPort; }
         }
         /// <summary>
         /// Sets and Gets the Port for the UDP connection
         /// </summary>
-        public short UdpPort { 
+        public ushort UdpPort { 
             set { udpPort = value; }
             get { return udpPort; }
         }
@@ -48,16 +48,16 @@ namespace Netamite.Server.Implementation {
         internal ConcurrentDictionary<int, IPEndPoint> udpEndpoints = new ConcurrentDictionary<int, IPEndPoint>();
 
         public IPServer() : base() { }
-        public IPServer(short port) : base() {
+        public IPServer(ushort port) : base() {
             Port = port;
         }
-        public IPServer(short port, int maxClients) : this(port) {
+        public IPServer(ushort port, int maxClients) : this(port) {
             MaxClients = maxClients;
         }
-        public IPServer(string bindingAddress, short port) : this(port) {
+        public IPServer(string bindingAddress, ushort port) : this(port) {
             _bindingAddress = bindingAddress;
         }
-        public IPServer(string bindingAddress, short port, int maxClients) : this(bindingAddress, port) {
+        public IPServer(string bindingAddress, ushort port, int maxClients) : this(bindingAddress, port) {
             MaxClients = maxClients;
         }
 

@@ -12,14 +12,14 @@ namespace Netamite.Client.Implementation {
     public class IPClient : NetamiteClient {
 
         private string ip;
-        private int port;
+        private ushort port;
 
         private TcpSocket tcp;
         private UdpSocket udp;
 
         public override string TYPE => "SOCKET";
 
-        public IPClient(string address, int port) : base() {
+        public IPClient(string address, ushort port) : base() {
             this.ip = NetworkUtil.GetIP(address);
             this.port = port;
         }
@@ -34,7 +34,7 @@ namespace Netamite.Client.Implementation {
                 tcp.onPacket = AwaitingConnectionHandler;
                 tcp.onDisconnect = onConnectionAbort;
 
-                if(!tcp.client.Connected) {
+                if (!tcp.client.Connected) {
                     _STATE = "FAILED";
                     Disconnect();
                     OnConnectionError?.Invoke("Connection failed.");
@@ -47,7 +47,7 @@ namespace Netamite.Client.Implementation {
         }
 
         public override void InvokeOnConnect() {
-            if(tcp != null) {
+            if (tcp != null) {
                 tcp.onPacket = null;
                 tcp.onPacket = onTcpPacketReceived;
             }
@@ -57,13 +57,13 @@ namespace Netamite.Client.Implementation {
 
         private void LinkUDP() {
             udp = new UdpSocket(ip, port);
-            udp.Connect(((IPEndPoint) tcp.client.Client.LocalEndPoint).Port);
+            udp.Connect(((IPEndPoint)tcp.client.Client.LocalEndPoint).Port);
             udp.onPacket = onUdpPacketReceived;
 
             // Send some udp packets, one should reach the host if ports are free
             Thread udpLinkThread = new Thread(() => {
-                for(int i = 0; i < 20; i++) {
-                    if(udp == null) break;
+                for (int i = 0; i < 20; i++) {
+                    if (udp == null) break;
                     udp.QueuePacket(new WelcomePacket(ClientId));
                     Thread.Sleep(100);
                 }
@@ -80,12 +80,12 @@ namespace Netamite.Client.Implementation {
         public override void Disconnect(string reason = DisconnectReason.CONNECTION_CLOSED) {
             base.Disconnect(reason);
 
-            if(tcp != null) {
+            if (tcp != null) {
                 tcp.onDisconnect -= onConnectionAbort;
                 tcp.Disconnect();
                 tcp = null;
             }
-            if(udp != null) {
+            if (udp != null) {
                 udp.onDisconnect -= onConnectionAbort;
                 udp.Disconnect();
                 udp = null;
@@ -94,17 +94,22 @@ namespace Netamite.Client.Implementation {
         }
 
         public override void SendReliable(NetPacket packet) {
-            if(tcp != null) {
+            if (tcp != null) {
                 tcp.QueuePacket(packet);
                 base.SendReliable(packet);
             }
         }
 
         public override void SendUnreliable(NetPacket packet) {
-            if(udp != null) {
+            if (udp != null) {
                 udp.QueuePacket(packet);
                 base.SendUnreliable(packet);
             }
+        }
+
+        public override void FlushData() {
+            tcp?.stream?.Flush();
+            base.FlushData();
         }
 
         internal void onTcpPacketReceived(NetPacket p) {
@@ -117,17 +122,24 @@ namespace Netamite.Client.Implementation {
 
         public override long GetBytesSent() {
             long val = 0;
-            if(tcp != null) { val += tcp.BytesSent; }
-            if(udp != null) { val += udp.BytesSent; }
+            if (tcp != null) { val += tcp.BytesSent; }
+            if (udp != null) { val += udp.BytesSent; }
 
             return val;
         }
         public override long GetBytesReceive() {
             long val = 0;
-            if(tcp != null) { val += tcp.BytesReceive; }
-            if(udp != null) { val += udp.BytesReceive; }
+            if (tcp != null) { val += tcp.BytesReceive; }
+            if (udp != null) { val += udp.BytesReceive; }
 
             return val;
+        }
+        
+        public string getIP() {
+            return ip;
+        }
+        public ushort getPort() {
+            return port;
         }
     }
 }

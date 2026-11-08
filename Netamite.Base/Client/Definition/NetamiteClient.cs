@@ -118,7 +118,10 @@ namespace Netamite.Client.Definition {
                 IsConnected = false;
                 OnDataReceived = null;
 
-                if(reason != null) SendReliable(new DisconnectPacket(ClientId, reason));
+                if(reason != null) {
+                    SendReliable(new DisconnectPacket(ClientId, reason));
+                    FlushData();
+                }
 
                 OnDisconnect.Invoke(reason);
             }
@@ -140,6 +143,7 @@ namespace Netamite.Client.Definition {
         }
         public virtual void SendReliable(NetPacket packet) { reliablePacketsSent++; }
         public virtual void SendUnreliable(NetPacket packet) { unreliablePacketsSent++; }
+        public virtual void FlushData() {}
 
         public void OnReliableReceived(NetPacket packet) {
             DataHandler(packet);
