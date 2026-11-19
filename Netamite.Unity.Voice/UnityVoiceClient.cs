@@ -63,7 +63,8 @@ namespace Netamite.Unity.Voice {
             reader.Initialize(this);
             reader.OnAudioPacketReady += OnPacketReady;
 
-            voiceReaderObj.AddComponent<MainThreadPump>().voiceClient = this;
+			voiceReaderObj.AddComponent<MainThreadPump>().voiceClient = this;
+            GameObject.DontDestroyOnLoad(voiceReaderObj);
         }
 
         public void Start() {
