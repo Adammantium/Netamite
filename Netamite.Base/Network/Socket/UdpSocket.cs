@@ -65,7 +65,7 @@ namespace Netamite.Network.Socket {
             }
         }
 
-        public override void SendPrepared(PreparedPacket packet) {
+        public override void SendPacket(PreparedPacket packet) {
             try {
                 UdpClient current = client;
                 if(current != null) {

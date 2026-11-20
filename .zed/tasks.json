@@ -1,0 +1,33 @@
+// Build tasks for Zed, run them with "task: spawn" (alt-shift-t) or rerun the last one with "task: rerun" (alt-t).
+// Uses Mono's msbuild, `dotnet build` doesn't find the .NET Framework 4.7.2 reference assemblies on Linux.
+[
+  {
+    "label": "Build Netamite (Debug)",
+    "command": "msbuild",
+    "args": ["-nologo", "-v:m", "-p:Configuration=Debug", "\"Netamite.sln\""],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "tags": ["build"]
+  },
+  {
+    "label": "Build Netamite (Release)",
+    "command": "msbuild",
+    "args": ["-nologo", "-v:m", "-p:Configuration=Release", "\"Netamite.sln\""],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "tags": ["build"]
+  },
+  {
+    "label": "Clean Netamite",
+    "command": "msbuild",
+    "args": ["-nologo", "-v:m", "-t:Clean", "\"Netamite.sln\""],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  }
+]

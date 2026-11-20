@@ -239,7 +239,7 @@ namespace Netamite.Network.Socket {
             }
         }
 
-        public override void SendPrepared(PreparedPacket packet) {
+        public override void SendPacket(PreparedPacket packet) {
             try {
                 if(client != null && stream != null && client.Connected) {
                     byte[] data = packet.GetData();

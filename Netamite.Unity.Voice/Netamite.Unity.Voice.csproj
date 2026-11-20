@@ -14,6 +14,8 @@
     <Deterministic>true</Deterministic>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <!-- Symbols with a leading "-" in DefineConstants are disabled on purpose, don't warn that the compiler ignores them -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3052</MSBuildWarningsAsMessages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

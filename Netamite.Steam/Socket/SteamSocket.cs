@@ -37,7 +37,7 @@ namespace Netamite.Steam.Socket {
             SendBytes(packet.GetData(true));
         }
 
-        public override void SendPrepared(PreparedPacket packet) {
+        public override void SendPacket(PreparedPacket packet) {
             SendBytes(packet.GetData()); // Already serialized if the packet went to somebody else before
         }
 

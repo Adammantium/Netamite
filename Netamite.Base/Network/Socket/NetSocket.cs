@@ -213,7 +213,7 @@ namespace Netamite.Network.Socket {
         /// </summary>
         internal virtual void Send(Outgoing outgoing) {
             if(outgoing.Prepared != null) {
-                SendPrepared(outgoing.Prepared);
+                SendPacket(outgoing.Prepared);
             } else if(outgoing.Packet != null) {
                 SendPacket(outgoing.Packet);
             }
@@ -230,7 +230,7 @@ namespace Netamite.Network.Socket {
         /// Sends a packet that is shared with other sockets. Override it to send packet.GetData(),
         /// by default the packet is serialized again like any other packet.
         /// </summary>
-        public virtual void SendPrepared(PreparedPacket packet) {
+        public virtual void SendPacket(PreparedPacket packet) {
             SendPacket(packet.Packet);
         }
         #endregion
