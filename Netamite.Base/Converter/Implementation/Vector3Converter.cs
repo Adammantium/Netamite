@@ -1,4 +1,5 @@
-﻿using Netamite.Datatype;
+﻿using Netamite.Network;
+using Netamite.Datatype;
 using System.Collections.Generic;
 
 namespace Netamite.Converter.Implementation {
@@ -21,6 +22,19 @@ namespace Netamite.Converter.Implementation {
             bytes.AddRange(FloatConverter.GetBytes(value.z, lowPrecision));
 
             return bytes.ToArray();
+        }
+
+        public override void Write(BinaryNetStream stream, Vector3 value, bool lowPrecision) {
+            stream.WriteFloat(value.x, lowPrecision);
+            stream.WriteFloat(value.y, lowPrecision);
+            stream.WriteFloat(value.z, lowPrecision);
+        }
+
+        public override Vector3 Read(BinaryNetStream stream, bool lowPrecision) {
+            float x = stream.ReadFloat(lowPrecision);
+            float y = stream.ReadFloat(lowPrecision);
+            float z = stream.ReadFloat(lowPrecision);
+            return new Vector3(x, y, z);
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Netamite.Converter;
 using Netamite.Converter.Implementation;
+using Netamite.Network;
 using UnityEngine;
 
 namespace Netamite.Unity.Converters {
@@ -18,6 +19,17 @@ namespace Netamite.Unity.Converters {
 
         public static Quaternion FromBuiltin(Datatype.Quaternion o) {
             return new Quaternion(o.x, o.y, o.z, o.w);
+        }
+
+        // Straight into the packet, without going through the Netamite Quaternion and a byte[]
+        public override void Write(BinaryNetStream stream, Quaternion value, bool lowPrecision) {
+            QuaternionConverter.WriteQuaternion(stream, value.x, value.y, value.z, value.w, lowPrecision);
+        }
+
+        public override Quaternion Read(BinaryNetStream stream, bool lowPrecision) {
+            float x, y, z, w;
+            QuaternionConverter.ReadQuaternion(stream, out x, out y, out z, out w, lowPrecision);
+            return new Quaternion(x, y, z, w);
         }
     }
 }

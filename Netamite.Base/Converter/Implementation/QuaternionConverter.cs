@@ -1,4 +1,5 @@
-﻿using Netamite.Datatype;
+﻿using Netamite.Network;
+using Netamite.Datatype;
 using System.Collections.Generic;
 
 namespace Netamite.Converter.Implementation {
@@ -42,6 +43,60 @@ namespace Netamite.Converter.Implementation {
                 bytes.AddRange(FloatConverter.GetBytes(value.z));
                 bytes.AddRange(FloatConverter.GetBytes(value.w));
                 return bytes.ToArray();
+            }
+        }
+
+        public override void Write(BinaryNetStream stream, Quaternion value, bool lowPrecision) {
+            WriteQuaternion(stream, value.x, value.y, value.z, value.w, lowPrecision);
+        }
+
+        public override Quaternion Read(BinaryNetStream stream, bool lowPrecision) {
+            float x, y, z, w;
+            ReadQuaternion(stream, out x, out y, out z, out w, lowPrecision);
+            return new Quaternion(x, y, z, w);
+        }
+
+        /// <summary>
+        /// Writes a quaternion given by its components, for converters of other quaternion types (like the one from Unity).
+        /// Low precision uses the smallest three compression: 7 bytes instead of 16, or just 1 byte if one component is 1.
+        /// </summary>
+        public static void WriteQuaternion(BinaryNetStream stream, float x, float y, float z, float w, bool lowPrecision) {
+            if(lowPrecision) {
+                short a, b, c;
+                byte header = Quaternion.Compress(x, y, z, w, out a, out b, out c);
+                stream.WriteByte(header);
+                if(header < 4) {
+                    stream.WriteShort(a);
+                    stream.WriteShort(b);
+                    stream.WriteShort(c);
+                }
+            } else {
+                stream.WriteFloat(x);
+                stream.WriteFloat(y);
+                stream.WriteFloat(z);
+                stream.WriteFloat(w);
+            }
+        }
+
+        /// <summary>
+        /// Counterpart of WriteQuaternion
+        /// </summary>
+        public static void ReadQuaternion(BinaryNetStream stream, out float x, out float y, out float z, out float w, bool lowPrecision) {
+            if(lowPrecision) {
+                byte maxIndex = stream.ReadByte();
+                if(maxIndex >= 4 && maxIndex <= 7) {
+                    Quaternion.Decompress(maxIndex, 0, 0, 0, out x, out y, out z, out w);
+                } else {
+                    short a = stream.ReadShort();
+                    short b = stream.ReadShort();
+                    short c = stream.ReadShort();
+                    Quaternion.Decompress(maxIndex, a, b, c, out x, out y, out z, out w);
+                }
+            } else {
+                x = stream.ReadFloat();
+                y = stream.ReadFloat();
+                z = stream.ReadFloat();
+                w = stream.ReadFloat();
             }
         }
     }

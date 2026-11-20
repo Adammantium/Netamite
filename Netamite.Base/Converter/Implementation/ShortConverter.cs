@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Network;
+using System;
 
 namespace Netamite.Converter.Implementation {
     public class ShortConverter : DataConverterInterface<short> {
@@ -10,6 +11,14 @@ namespace Netamite.Converter.Implementation {
 
         public static new byte[] GetBytes(short value, bool lowPrecision = false) {
             return BitConverter.GetBytes(value);
+        }
+
+        public override void Write(BinaryNetStream stream, short value, bool lowPrecision) {
+            stream.WriteShort(value);
+        }
+
+        public override short Read(BinaryNetStream stream, bool lowPrecision) {
+            return stream.ReadShort();
         }
     }
 }

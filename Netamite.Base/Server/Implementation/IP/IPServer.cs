@@ -1,6 +1,7 @@
 ﻿using Netamite.Datatype;
 using Netamite.Helper;
 using Netamite.Logging;
+using Netamite.Network;
 using Netamite.Network.Packet;
 using Netamite.Network.Packet.Implementations;
 using Netamite.Network.Socket;
@@ -46,6 +47,8 @@ namespace Netamite.Server.Implementation {
         internal ConcurrentDictionary<NetSocket, long> waitingForConnectionSockets = new ConcurrentDictionary<NetSocket, long>();
         internal ConcurrentDictionary<int, TcpSocket> tcpConnections = new ConcurrentDictionary<int, TcpSocket>();
         internal ConcurrentDictionary<int, IPEndPoint> udpEndpoints = new ConcurrentDictionary<int, IPEndPoint>();
+        // The other way around, to find out who sent a datagram without comparing its address to the one of every client
+        internal ConcurrentDictionary<IPEndPoint, int> udpClientIds = new ConcurrentDictionary<IPEndPoint, int>();
 
         public IPServer() : base() { }
         public IPServer(ushort port) : base() {
@@ -124,35 +127,30 @@ namespace Netamite.Server.Implementation {
 
                 if(data == null || data.Length <= 2) return;
 
-
-
                 // Determine client id by EndPoint
-                bool found = false;
-                foreach(KeyValuePair<int, IPEndPoint> entry in udpEndpoints) {
-                    if(IPEndPoint.Equals(entry.Value, clientEndPoint)) {
-                        NetPacket netPacket = NetPacket.ReadPacket(data, true);
-                        if(!_clients.ContainsKey(entry.Key)) return;
+                int clientId;
+                if(udpClientIds.TryGetValue(clientEndPoint, out clientId)) {
+                    ClientInformation client;
+                    if(!_clients.TryGetValue(clientId, out client)) return;
 
-                        if(!(netPacket is WelcomePacket)) {
-                            ProcessPacket(_clients[entry.Key], netPacket);
-                        }
-                        found = true;
-                        break;
+                    NetPacket netPacket = NetPacket.ReadPacket(data, true);
+                    if(!(netPacket is WelcomePacket)) {
+                        ProcessPacket(client, netPacket);
                     }
-                }
-                if(!found) {
+                } else {
                     // Check if its a welcome package and if the user is not linked up
                     using(NetPacket packet = NetPacket.ReadPacket(data, true)) {
                         if(packet is WelcomePacket) {
-                            int clientId = ((WelcomePacket) packet).ClientId;
+                            clientId = ((WelcomePacket) packet).ClientId;
 
                             // If no udp is connected, then link up
-                            if(!udpEndpoints.ContainsKey(clientId) && _clients.ContainsKey(clientId)) {
-                                udpEndpoints.TryAdd(clientId, clientEndPoint);
+                            ClientInformation clientInformation;
+                            if(!udpEndpoints.ContainsKey(clientId) && _clients.TryGetValue(clientId, out clientInformation)) {
+                                if(udpEndpoints.TryAdd(clientId, clientEndPoint)) {
+                                    udpClientIds[clientEndPoint] = clientId;
 
-                                ClientInformation clientInformation = _clients[clientId];
-
-                                Log.Debug(Defines.SERVER, "Linked UDP for " + clientInformation.ClientName + " (" + clientEndPoint + ")");
+                                    Log.Debug(Defines.SERVER, "Linked UDP for " + clientInformation.ClientName + " (" + clientEndPoint + ")");
+                                }
                                 return;
                             }
                         }
@@ -195,27 +193,52 @@ namespace Netamite.Server.Implementation {
         public override void ClientLeft(ClientInformation client, string reason = DisconnectReason.CONNECTION_CLOSED) {
             base.ClientLeft(client, reason);
 
-            if(tcpConnections.ContainsKey(client.ClientId)) {
-                tcpConnections[client.ClientId].Disconnect();
-                tcpConnections.TryRemove(client.ClientId, out _);
+            IPEndPoint udpEndpoint;
+            if(udpEndpoints.TryRemove(client.ClientId, out udpEndpoint)) {
+                // Only if the address still belongs to this client, somebody else could have taken it over in the meantime
+                ((ICollection<KeyValuePair<IPEndPoint, int>>) udpClientIds).Remove(new KeyValuePair<IPEndPoint, int>(udpEndpoint, client.ClientId));
             }
-            if(udpEndpoints.ContainsKey(client.ClientId)) {
-                udpEndpoints.TryRemove(client.ClientId, out _);
+            TcpSocket tcpSocket;
+            if(tcpConnections.TryRemove(client.ClientId, out tcpSocket)) {
+                tcpSocket.Disconnect();
             }
         }
 
         // Reliable
         public override void SendReliableTo(ClientInformation client, NetPacket p) {
-            if(tcpConnections.ContainsKey(client.ClientId)) {
-                tcpConnections[client.ClientId].QueuePacket(p);
+            TcpSocket tcpSocket;
+            if(tcpConnections.TryGetValue(client.ClientId, out tcpSocket)) {
+                tcpSocket.QueuePacket(p);
+            }
+        }
+
+        public override void SendReliableTo(ClientInformation client, PreparedPacket p) {
+            TcpSocket tcpSocket;
+            if(tcpConnections.TryGetValue(client.ClientId, out tcpSocket)) {
+                tcpSocket.QueuePacket(p);
             }
         }
 
         // Unreliable
         public override void SendUnreliableTo(ClientInformation client, NetPacket p) {
-            if(udpEndpoints.ContainsKey(client.ClientId)) {
-                byte[] data = p.GetData(true);
-                udpListener.Send(data, data.Length, udpEndpoints[client.ClientId]);
+            IPEndPoint endPoint;
+            if(udpEndpoints.TryGetValue(client.ClientId, out endPoint)) {
+                // Serialized into the buffer of this thread and handed to the socket from there, no array per packet needed
+                BinaryNetStream stream = BinaryNetStream.RentWriter();
+                try {
+                    p.WriteTo(stream, true);
+                    udpListener.Client.SendTo(stream.RawBuffer, stream.RawOffset, stream.Length(), SocketFlags.None, endPoint);
+                } finally {
+                    BinaryNetStream.ReturnWriter(stream);
+                }
+            }
+        }
+
+        public override void SendUnreliableTo(ClientInformation client, PreparedPacket p) {
+            IPEndPoint endPoint;
+            if(udpEndpoints.TryGetValue(client.ClientId, out endPoint)) {
+                byte[] data = p.GetData();
+                udpListener.Client.SendTo(data, 0, data.Length, SocketFlags.None, endPoint);
             }
         }
 

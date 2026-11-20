@@ -1,4 +1,5 @@
-﻿using Netamite.Datatype;
+﻿using Netamite.Network;
+using Netamite.Datatype;
 using System.Collections.Generic;
 
 namespace Netamite.Converter.Implementation {
@@ -23,6 +24,21 @@ namespace Netamite.Converter.Implementation {
             bytes.AddRange(FloatConverter.GetBytes(value.a, lowPrecision));
 
             return bytes.ToArray();
+        }
+
+        public override void Write(BinaryNetStream stream, Color value, bool lowPrecision) {
+            stream.WriteFloat(value.r, lowPrecision);
+            stream.WriteFloat(value.g, lowPrecision);
+            stream.WriteFloat(value.b, lowPrecision);
+            stream.WriteFloat(value.a, lowPrecision);
+        }
+
+        public override Color Read(BinaryNetStream stream, bool lowPrecision) {
+            float r = stream.ReadFloat(lowPrecision);
+            float g = stream.ReadFloat(lowPrecision);
+            float b = stream.ReadFloat(lowPrecision);
+            float a = stream.ReadFloat(lowPrecision);
+            return new Color(r, g, b, a);
         }
     }
 }

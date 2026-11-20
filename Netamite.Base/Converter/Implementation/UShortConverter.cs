@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Network;
+using System;
 using System.Text;
 
 namespace Netamite.Converter.Implementation {
@@ -26,6 +27,14 @@ namespace Netamite.Converter.Implementation {
             }
 
             return hex.ToString();
+        }
+
+        public override void Write(BinaryNetStream stream, ushort value, bool lowPrecision) {
+            stream.WriteUShort(value);
+        }
+
+        public override ushort Read(BinaryNetStream stream, bool lowPrecision) {
+            return stream.ReadUShort();
         }
     }
 }

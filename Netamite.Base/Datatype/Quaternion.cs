@@ -49,6 +49,32 @@ namespace Netamite.Datatype {
         private const float FLOAT_PRECISION_MULT = 10000f;
 
         public byte[] Compress() {
+            short a, b, c;
+            byte header = Compress(x, y, z, w, out a, out b, out c);
+
+            // If the maximum value is approximately 1f (such as Quaternion.identity [0,0,0,1]), then we can 
+            // reduce storage even further due to the fact that all other fields must be 0f by definition, so 
+            // we only need to send the index of the largest field.
+            if(header >= 4) {
+                return new byte[] { header };
+            }
+
+            return new byte[] {
+                header,
+                (byte) a, (byte) (a >> 8),
+                (byte) b, (byte) (b >> 8),
+                (byte) c, (byte) (c >> 8)
+            };
+        }
+
+        /// <summary>
+        /// Smallest three compression of a quaternion given by its components, without allocating anything.
+        /// </summary>
+        /// <returns>
+        /// 0 - 3: Index of the biggest component, which is left out. The other three are returned in a, b and c.
+        /// 4 - 7: The component with the index (value - 4) is 1, all others are 0. a, b and c are not used.
+        /// </returns>
+        public static byte Compress(float x, float y, float z, float w, out short a, out short b, out short c) {
             byte maxIndex = 0;
             float maxValue = float.MinValue;
             float sign = 1f;
@@ -57,7 +83,7 @@ namespace Netamite.Datatype {
             // We will transmit only the three smallest elements, and reconstruct the largest
             // element during decoding. 
             for(int i = 0; i < 4; i++) {
-                float element = this[i];
+                float element = (i == 0 ? x : (i == 1 ? y : (i == 2 ? z : w)));
                 float abs     = Math.Abs(element);
                 if(abs > maxValue) {
                     // We don't need to explicitly transmit the sign bit of the omitted element because you 
@@ -79,12 +105,9 @@ namespace Netamite.Datatype {
                 // Again, don't need to transmit the sign since in quaternion space (x,y,z,w) and (-x,-y,-z,-w) 
                 // represent the same rotation. We only need to send the index of the single element whose value
                 // is 1f in order to recreate an equivalent rotation on the receiver.
-                return new byte[] { (byte)(maxIndex + 4) };
+                a = b = c = 0;
+                return (byte)(maxIndex + 4);
             }
-
-            short a;
-            short b;
-            short c;
 
             // We multiply the value of each element by QUAT_PRECISION_MULT before converting to 16-bit integer 
             // in order to maintain precision. This is necessary since by definition each of the three smallest 
@@ -109,49 +132,62 @@ namespace Netamite.Datatype {
                 c = (short)(z * sign * FLOAT_PRECISION_MULT);
             }
 
-            List<byte> list = new List<byte>();
-            list.Add(maxIndex);
-            list.AddRange(BitConverter.GetBytes(a));
-            list.AddRange(BitConverter.GetBytes(b));
-            list.AddRange(BitConverter.GetBytes(c));
-
-            return list.ToArray();
+            return maxIndex;
         }
 
         public static Quaternion Decompress(byte maxIndex, short[] data = null) {
             // Values between 4 and 7 indicate that only the index of the single field whose value is 1f was
             // sent, and (maxIndex - 4) is the correct index for that field.
+            bool single = maxIndex >= 4 && maxIndex <= 7;
+
+            if(!single) {
+                if(data == null) {
+                    throw new ArgumentNullException("Quaternion couldn't be decompressed, no data specified!");
+                }
+
+                if(data.Length < 3) {
+                    throw new ArgumentNullException($"Quaternion couldn't be decompressed, not enough data specified! Required: 3 / Provided: {data.Length}");
+                }
+            }
+
+            float x, y, z, w;
+            if(single) {
+                Decompress(maxIndex, 0, 0, 0, out x, out y, out z, out w);
+            } else {
+                Decompress(maxIndex, data[0], data[1], data[2], out x, out y, out z, out w);
+            }
+            return new Quaternion(x, y, z, w);
+        }
+
+        /// <summary>
+        /// Counterpart of Compress, gives back the components of the quaternion without allocating anything.
+        /// </summary>
+        public static void Decompress(byte maxIndex, short a, short b, short c, out float x, out float y, out float z, out float w) {
+            // Values between 4 and 7 indicate that only the index of the single field whose value is 1f was
+            // sent, and (maxIndex - 4) is the correct index for that field.
             if(maxIndex >= 4 && maxIndex <= 7) {
-                float x = (maxIndex == 4) ? 1f : 0f;
-                float y = (maxIndex == 5) ? 1f : 0f;
-                float z = (maxIndex == 6) ? 1f : 0f;
-                float w = (maxIndex == 7) ? 1f : 0f;
-
-                return new Quaternion(x, y, z, w);
-            }
-
-            if(data == null) {
-                throw new ArgumentNullException("Quaternion couldn't be decompressed, no data specified!");
-            }
-
-            if(data.Length < 3) {
-                throw new ArgumentNullException($"Quaternion couldn't be decompressed, not enough data specified! Required: 3 / Provided: {data.Length}");
+                x = (maxIndex == 4) ? 1f : 0f;
+                y = (maxIndex == 5) ? 1f : 0f;
+                z = (maxIndex == 6) ? 1f : 0f;
+                w = (maxIndex == 7) ? 1f : 0f;
+                return;
             }
 
             // Read the other three fields and derive the value of the omitted field
-            float a = (float) data[0] / FLOAT_PRECISION_MULT;
-            float b = (float) data[1] / FLOAT_PRECISION_MULT;
-            float c = (float) data[2] / FLOAT_PRECISION_MULT;
-            float d = (float) Math.Sqrt(1f - (a * a + b * b + c * c));
+            float fa = (float) a / FLOAT_PRECISION_MULT;
+            float fb = (float) b / FLOAT_PRECISION_MULT;
+            float fc = (float) c / FLOAT_PRECISION_MULT;
+            float fd = (float) Math.Sqrt(1f - (fa * fa + fb * fb + fc * fc));
 
-            if(maxIndex == 0)
-                return new Quaternion(d, a, b, c);
-            else if(maxIndex == 1)
-                return new Quaternion(a, d, b, c);
-            else if(maxIndex == 2)
-                return new Quaternion(a, b, d, c);
-
-            return new Quaternion(a, b, c, d);
+            if(maxIndex == 0) {
+                x = fd; y = fa; z = fb; w = fc;
+            } else if(maxIndex == 1) {
+                x = fa; y = fd; z = fb; w = fc;
+            } else if(maxIndex == 2) {
+                x = fa; y = fb; z = fd; w = fc;
+            } else {
+                x = fa; y = fb; z = fc; w = fd;
+            }
         }
 
         /*

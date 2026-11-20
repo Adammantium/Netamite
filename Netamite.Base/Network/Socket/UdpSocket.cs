@@ -42,14 +42,41 @@ namespace Netamite.Network.Socket {
         }
 
         public override void SendPacket(NetPacket packet) {
+            // Serialized into the buffer of this thread and handed to the socket from there, no array per packet needed
+            BinaryNetStream stream = BinaryNetStream.RentWriter();
             try {
-                if(client != null) {
-                    byte[] data = packet.GetData(true);
+                UdpClient current = client;
+                if(current != null) {
+                    packet.WriteTo(stream, true);
+                    int length = stream.Length();
+
+                    bytesSent += length;
+
+                    current.Client.Send(stream.RawBuffer, stream.RawOffset, length, SocketFlags.None);
+                }
+            } catch(SocketException) {
+                // Nobody reachable on the other side, UDP makes no promises
+            } catch(ObjectDisposedException) {
+                // Socket got closed in this very moment
+            } catch(Exception e) {
+                Log.Err($"Error sending data to {endPoint} via UDP: {e}");
+            } finally {
+                BinaryNetStream.ReturnWriter(stream);
+            }
+        }
+
+        public override void SendPrepared(PreparedPacket packet) {
+            try {
+                UdpClient current = client;
+                if(current != null) {
+                    byte[] data = packet.GetData();
 
                     bytesSent += data.Length;
 
-                    client.SendAsync(data, data.Length);
+                    current.Client.Send(data, 0, data.Length, SocketFlags.None);
                 }
+            } catch(SocketException) {
+            } catch(ObjectDisposedException) {
             } catch(Exception e) {
                 Log.Err($"Error sending data to {endPoint} via UDP: {e}");
             }
@@ -69,15 +96,25 @@ namespace Netamite.Network.Socket {
                         Disconnect();
                         return;
                     }
-                    HandleData(array);
+
+                    // Every datagram stands for itself, a broken one must not affect the ones that follow
+                    HandleDatagram(array, 0, array.Length);
                 }
             } catch(SocketException e) {
                 Log.Err("Failed to receive data with udp, " + e);
                 Disconnect();
             } catch(ObjectDisposedException) { return; } catch(IOException) { return; }
 
-            if(client != null)
-                client.BeginReceive(new AsyncCallback(this.ReceiveCallback), null);
+            try {
+                UdpClient current = client;
+                if(current != null)
+                    current.BeginReceive(new AsyncCallback(this.ReceiveCallback), null);
+            } catch(ObjectDisposedException) {
+                // Socket got closed while the packets were handled
+            } catch(SocketException e) {
+                Log.Err("Failed to receive data with udp, " + e);
+                Disconnect();
+            }
         }
 
     }

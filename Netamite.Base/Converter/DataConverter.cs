@@ -1,17 +1,25 @@
-﻿using System;
+﻿using Netamite.Logging;
+using Netamite.Network;
+using Netamite.Network.Packet;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace Netamite.Converter {
     public class DataConverter {
 
         public static byte[] GetBytes(object value, bool lowPrecision = false) {
-            Type converter = GetConverterForType(value.GetType());
+            DataConverterBase converter = Find(value.GetType());
+            if(converter == null) throw new MissingDataConverterException(value.GetType());
 
-            if(converter != null)
-                return (byte[]) GetConverterMethod(getBytesMethods, converter, "GetBytes").Invoke(null, new object[] { value, lowPrecision });
-
-            throw new MissingDataConverterException(value.GetType());
+            BinaryNetStream stream = BinaryNetStream.RentWriter();
+            try {
+                converter.WriteBoxed(stream, value, lowPrecision);
+                return stream.ToArray();
+            } finally {
+                BinaryNetStream.ReturnWriter(stream);
+            }
         }
 
         // This function doesn't need to be replaced
@@ -21,67 +29,141 @@ namespace Netamite.Converter {
 
         public static object FromBytes(Type type, byte[] value, out int bytesRead, int startIndex = 0, bool lowPrecision = false) {
             bytesRead = 0;
-            Type converter = GetConverterForType(type);
-            
-            if(converter != null) {
-                object[] parameters = new object[] { value, bytesRead, startIndex, lowPrecision };
-                object result = null;
-                try {
-                    result = GetConverterMethod(fromBytesMethods, converter, "FromBytes").Invoke(null, parameters);
-                }catch(System.Reflection.TargetInvocationException ex) {
-                    Logging.Log.Err(ex.InnerException);
-                    throw ex;
-                }
+            DataConverterBase converter = Find(type);
+            if(converter == null) throw new MissingDataConverterException(type);
+
+            BinaryNetStream stream = BinaryNetStream.RentReader();
+            try {
+                stream.SetBuffer(value, startIndex, value.Length - startIndex);
+                object result = converter.ReadBoxed(stream, lowPrecision);
                 if(result != null) {
-                    bytesRead = (int) parameters[1];
+                    bytesRead = (value.Length - startIndex) - stream.UnreadLength();
                 }
                 return result;
+            } finally {
+                BinaryNetStream.ReturnReader(stream);
             }
-
-            throw new MissingDataConverterException(type);
-        }
-        
-        // GetMethod is a slow, allocating lookup and runs for every single value, so cache it per converter
-        private static readonly ConcurrentDictionary<Type, MethodInfo> getBytesMethods = new ConcurrentDictionary<Type, MethodInfo>();
-        private static readonly ConcurrentDictionary<Type, MethodInfo> fromBytesMethods = new ConcurrentDictionary<Type, MethodInfo>();
-
-        private static MethodInfo GetConverterMethod(ConcurrentDictionary<Type, MethodInfo> cache, Type converter, string name) {
-            MethodInfo method;
-            if(cache.TryGetValue(converter, out method)) return method;
-
-            return cache.GetOrAdd(converter, c => c.GetMethod(name));
         }
 
-        private static ConcurrentDictionary<Type, Type> converters = new ConcurrentDictionary<Type, Type>();
-        private static Type GetConverterForType(Type to_find) {
-            if(to_find.IsEnum) {
-                to_find = to_find.GetEnumUnderlyingType();
-            }
+        #region Converter lookup
+        // Converter of every type that has been asked for so far, null for types without one. Enums use the converter of their underlying type
+        private static volatile ConcurrentDictionary<Type, DataConverterBase> converters = new ConcurrentDictionary<Type, DataConverterBase>();
 
-            if(converters.ContainsKey(to_find)) {
-                Type converter;
-                if(converters.TryGetValue(to_find, out converter) && converter != null) {
-                    return converter;
+        // All converter classes that exist: converted type => converter class
+        private static readonly Dictionary<Type, Type> converterTypes = new Dictionary<Type, Type>();
+        private static readonly object scanLock = new object();
+
+        /// <summary>
+        /// The converter that handles the type, null if there is none
+        /// </summary>
+        internal static DataConverterBase Find(Type type) {
+            RefreshIfNeeded();
+
+            DataConverterBase converter;
+            if(converters.TryGetValue(type, out converter)) return converter;
+
+            Type lookup = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+            Type converterType;
+            lock(scanLock) {
+                converterTypes.TryGetValue(lookup, out converterType);
+            }
+            converter = converterType != null ? CreateConverter(lookup, converterType) : null;
+
+            return converters.GetOrAdd(type, converter);
+        }
+
+        private static DataConverterBase CreateConverter(Type valueType, Type converterType) {
+            try {
+                if(!converterType.IsAbstract && converterType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null) {
+                    return (DataConverterBase) Activator.CreateInstance(converterType, true);
+                }
+                // Can't be instantiated, but its static GetBytes / FromBytes methods still work
+                return (DataConverterBase) Activator.CreateInstance(typeof(StaticDataConverter<>).MakeGenericType(valueType), converterType);
+            } catch(Exception e) {
+                Log.Err(Defines.NETAMITE, $"Converter {converterType} for {valueType} can't be used: {e}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Looks through the assembly for converters, a converter is every class that directly extends DataConverterInterface.
+        /// If multiple converters exist for one type the first one wins.
+        /// </summary>
+        /// <returns>true if the assembly contained converters that were unknown so far</returns>
+        private static bool ScanForConverters(Type[] types) {
+            bool found = false;
+            foreach(Type t in types) {
+                if(t == null) continue;
+                Type baseType = t.BaseType;
+                if(baseType == null) continue;
+                if(!baseType.IsGenericType) continue;
+                if(t.ContainsGenericParameters) continue;
+                if(t.IsGenericType && t.GetGenericTypeDefinition() == typeof(StaticDataConverter<>)) continue;
+                if(baseType.GetGenericTypeDefinition() != typeof(DataConverterInterface<>)) continue;
+
+                Type valueType = baseType.GetGenericArguments()[0];
+                if(converterTypes.ContainsKey(valueType)) continue;
+
+                converterTypes.Add(valueType, t);
+                found = true;
+            }
+            return found;
+        }
+        #endregion
+
+        #region Assembly scanning
+        // Converters and packets live in whatever assembly the game / mod / plugin brings along, so all of them have to be
+        // looked through. That is expensive (GetTypes on everything), so every assembly gets looked at exactly once and
+        // only assemblies that got loaded since the last time trigger a new scan.
+        private static readonly HashSet<Assembly> scannedAssemblies = new HashSet<Assembly>();
+        private static volatile bool assembliesChanged = true;
+        private static bool listeningForAssemblies = false;
+
+        internal static void RefreshIfNeeded() {
+            if(assembliesChanged) ScanAssemblies();
+        }
+
+        private static void ScanAssemblies() {
+            lock(scanLock) {
+                if(!assembliesChanged) return;
+
+                if(!listeningForAssemblies) {
+                    listeningForAssemblies = true;
+                    try {
+                        AppDomain.CurrentDomain.AssemblyLoad += (sender, args) => assembliesChanged = true;
+                    } catch(Exception) { } // Runtimes that can't load assemblies later on have nothing to tell us
+                }
+
+                // Reset first, an assembly that gets loaded while scanning must cause another scan
+                assembliesChanged = false;
+
+                bool newConverters = false;
+                foreach(Assembly assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+                    if(!scannedAssemblies.Add(assembly)) continue;
+                    if(assembly.IsDynamic) continue; // Generated at runtime (Harmony patches and the like), no packets in there
+
+                    Type[] types;
+                    try {
+                        types = assembly.GetTypes();
+                    } catch(ReflectionTypeLoadException e) {
+                        types = e.Types; // Whatever could be loaded, the rest is null
+                    } catch(Exception) {
+                        continue;
+                    }
+                    if(types == null) continue;
+
+                    newConverters |= ScanForConverters(types);
+                    NetPacket.ScanForPackets(types);
+                }
+
+                if(newConverters) {
+                    // Everything built so far might have been built without knowing those converters
+                    converters = new ConcurrentDictionary<Type, DataConverterBase>();
+                    ObjectSerializer.Invalidate();
+                    NetPacket.InvalidateSerializers();
                 }
             }
-
-            foreach(Assembly assembly in AppDomain.CurrentDomain.GetAssemblies()) {
-                try {
-                    foreach(Type t in assembly.GetTypes()) {
-                        if(t.BaseType == null) continue;
-                        if(!t.BaseType.IsGenericType) continue;
-                        if(t.BaseType.GetGenericTypeDefinition() == typeof(DataConverterInterface<>)) {
-                            foreach(Type arg in t.BaseType.GetGenericArguments()) {
-                                if(arg == to_find) {
-                                    converters.TryAdd(to_find, t);
-                                    return t;
-                                }
-                            }
-                        }
-                    }
-                }catch(ReflectionTypeLoadException) { } // Ignore it if a assembly cant be fully checked
-            }
-            return null;
         }
+        #endregion
     }
 }

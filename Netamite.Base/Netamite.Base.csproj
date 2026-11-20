@@ -85,6 +85,10 @@
     <Compile Include="Network\BinaryNetStream.cs" />
     <Compile Include="Network\Helper\NetworkUtil.cs" />
     <Compile Include="Network\Packet\SyncedMemberCache.cs" />
+    <Compile Include="Network\Packet\MemberCodec.cs" />
+    <Compile Include="Network\Packet\FieldAccess.cs" />
+    <Compile Include="Network\Packet\ObjectSerializer.cs" />
+    <Compile Include="Network\Packet\PreparedPacket.cs" />
     <Compile Include="Network\Packet\Implementations\MessagePacket.cs" />
     <Compile Include="Network\Packet\Implementations\DisconnectPacket.cs" />
     <Compile Include="Network\Packet\Implementations\ErrorPacket.cs" />

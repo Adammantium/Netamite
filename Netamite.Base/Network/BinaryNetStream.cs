@@ -1,57 +1,83 @@
 ﻿using Netamite.Converter;
-using Netamite.Extension;
+using Netamite.Datatype;
 using Netamite.Network.Packet;
-using Netamite.Network.Packet.Attributes;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 
 namespace Netamite.Network {
+    /// <summary>
+    /// Growable byte buffer packets get written into and read from.
+    /// Values are written straight into one array, nothing gets allocated per value.
+    /// </summary>
     public class BinaryNetStream {
-        private List<byte> buffer = new List<byte>();
+        // Free bytes kept in front of the data, so a length can be put in front of a packet without moving it
+        private const int HEADROOM = 8;
+        private const int INITIAL_CAPACITY = 256;
+        // Streams that grew bigger than this are not kept around for reuse
+        private const int MAX_POOLED_CAPACITY = 128 * 1024;
 
-        private byte[] readableBuffer;
-        private int readPos;
+        private byte[] buffer;
+        private int start;      // Index of the first byte of data in the buffer
+        private int end;        // Index behind the last byte of data
+        private int readPos;    // Relative to start
+        private bool external;  // The buffer belongs to somebody else and must not be written to
         private bool disposed;
 
         public byte[] Data {
-            get { return readableBuffer; }
+            get {
+                if(buffer == null) return null;
+                if(start == 0 && end == buffer.Length) return buffer;
+                return ToArray();
+            }
         }
 
-        public BinaryNetStream() {
-            readPos = 0;
-        }
+        public BinaryNetStream() { }
 
         public BinaryNetStream(byte type) {
-            readPos = 0;
-            Write(type);
+            WriteByte(type);
         }
 
         public BinaryNetStream(byte[] data) {
-            readPos = 0;
             SetBytes(data);
         }
 
+        /// <summary>
+        /// Reads from the given array. The array is not copied, so it must not be changed while reading from it.
+        /// </summary>
         public void SetBytes(byte[] data) {
-            buffer.Clear();
-            buffer.AddRange(data);
-            readableBuffer = buffer.ToArray();
+            SetBuffer(data, 0, data.Length, false);
+        }
+
+        /// <summary>
+        /// Reads from a part of an array without copying it
+        /// </summary>
+        internal void SetBuffer(byte[] data, int offset, int count, bool resetPos = true) {
+            buffer = data;
+            start = offset;
+            end = offset + count;
+            external = true;
+            if(resetPos) readPos = 0;
         }
 
         public void InsertInt(int value) {
-            buffer.InsertRange(0, BitConverter.GetBytes(value));
+            int at = ReserveFront(4);
+            buffer[at]     = (byte) value;
+            buffer[at + 1] = (byte) (value >> 8);
+            buffer[at + 2] = (byte) (value >> 16);
+            buffer[at + 3] = (byte) (value >> 24);
         }
 
         public byte[] ToArray() {
-            readableBuffer = buffer.ToArray();
-            return readableBuffer;
+            int length = end - start;
+            byte[] result = new byte[length];
+            if(length > 0) Buffer.BlockCopy(buffer, start, result, 0, length);
+            return result;
         }
 
         public int Length() {
-            return buffer.Count;
+            return end - start;
         }
 
         public int UnreadLength() {
@@ -64,48 +90,271 @@ namespace Netamite.Network {
 
         public void Reset(bool shouldReset = true) {
             if(shouldReset) {
-                buffer.Clear();
-                readableBuffer = null;
-                readPos = 0;
+                Clear();
                 return;
             }
             readPos -= 4;
         }
 
-        #region Write to the Buffer
-        public void WriteLength() {
-            buffer.InsertRange(0, BitConverter.GetBytes((ushort) buffer.Count));
+        /// <summary>
+        /// Empties the stream but keeps its memory for the next use
+        /// </summary>
+        internal void Clear() {
+            if(external) {
+                buffer = null;
+                external = false;
+            }
+            start = end = (buffer == null ? 0 : HEADROOM);
+            readPos = 0;
         }
 
-        public void WriteArray(object[] val, bool lowPrecision = false) {
-            if(val == null) {
-                Write((ushort) 0);
+        // The array behind the stream and where the data sits in it, to hand the data to a socket without copying it
+        internal byte[] RawBuffer { get { return buffer; } }
+        internal int RawOffset { get { return start; } }
+        internal int RawReadPosition { get { return start + readPos; } }
+        internal int Capacity { get { return buffer == null ? 0 : buffer.Length; } }
+
+        /// <summary>
+        /// Cuts the stream back to the given length, used to drop a half written packet
+        /// </summary>
+        internal void SetLength(int length) {
+            if(length < 0 || length > end - start) throw new ArgumentOutOfRangeException(nameof(length));
+            end = start + length;
+        }
+
+        #region Memory handling
+        private void EnsureWritable(int additional) {
+            if(buffer == null) {
+                buffer = new byte[Math.Max(INITIAL_CAPACITY, HEADROOM + additional)];
+                start = end = HEADROOM;
+                external = false;
                 return;
             }
+            if(!external && end + additional <= buffer.Length) return;
 
-            Type type = val.GetType();
+            int length = end - start;
+            byte[] grown = new byte[Math.Max(INITIAL_CAPACITY, Math.Max(buffer.Length * 2, HEADROOM + length + additional))];
+            if(length > 0) Buffer.BlockCopy(buffer, start, grown, HEADROOM, length);
+            buffer = grown;
+            start = HEADROOM;
+            end = HEADROOM + length;
+            external = false;
+        }
 
-            if(type.IsArray) {
-                Write((ushort) val.Length);
+        /// <summary>
+        /// Makes room in front of the data and returns the index the new bytes have to be written to
+        /// </summary>
+        private int ReserveFront(int count) {
+            if(buffer == null || external || start < count) {
+                int length = end - start;
+                byte[] target = (buffer != null && !external && HEADROOM + count + length <= buffer.Length)
+                              ? buffer
+                              : new byte[Math.Max(INITIAL_CAPACITY, (HEADROOM + count + length) * 2)];
+                if(length > 0) Buffer.BlockCopy(buffer, start, target, HEADROOM + count, length);
+                buffer = target;
+                start = HEADROOM + count;
+                end = start + length;
+                external = false;
+            }
+            start -= count;
+            return start;
+        }
 
-                foreach(object v in val) {
-                    Write(v, lowPrecision);
-                }
+        /// <summary>
+        /// Moves the read position forward and returns the index the data starts at
+        /// </summary>
+        private int Take(int count) {
+            if(count < 0 || count > end - start - readPos) {
+                throw new Exception("Could not read " + count + " bytes, only " + (end - start - readPos) + " left!");
+            }
+            int at = start + readPos;
+            readPos += count;
+            return at;
+        }
+
+        internal void Skip(int count) {
+            Take(count);
+        }
+
+        [ThreadStatic] private static BinaryNetStream pooledWriter;
+        [ThreadStatic] private static BinaryNetStream pooledReader;
+
+        /// <summary>
+        /// Every thread keeps one stream for writing around, so serializing a packet doesn't need a new buffer every time.
+        /// Has to be given back with ReturnWriter. Nested use on the same thread just gets a fresh stream.
+        /// </summary>
+        internal static BinaryNetStream RentWriter() {
+            BinaryNetStream stream = pooledWriter;
+            if(stream == null) return new BinaryNetStream();
+            pooledWriter = null;
+            return stream;
+        }
+
+        internal static void ReturnWriter(BinaryNetStream stream) {
+            if(stream.Capacity > MAX_POOLED_CAPACITY) return;
+            stream.Clear();
+            pooledWriter = stream;
+        }
+
+        internal static BinaryNetStream RentReader() {
+            BinaryNetStream stream = pooledReader;
+            if(stream == null) return new BinaryNetStream();
+            pooledReader = null;
+            return stream;
+        }
+
+        internal static void ReturnReader(BinaryNetStream stream) {
+            stream.Clear(); // Lets go of the array that was read from
+            pooledReader = stream;
+        }
+        #endregion
+
+        #region Write to the Buffer
+        /// <summary>
+        /// Puts the length of everything written so far in front of it
+        /// </summary>
+        public void WriteLength() {
+            int length = end - start;
+            int at = ReserveFront(2);
+            buffer[at]     = (byte) length;
+            buffer[at + 1] = (byte) (length >> 8);
+        }
+
+        /// <summary>
+        /// Overwrites two bytes that have already been written, position is counted from the start of the stream
+        /// </summary>
+        internal void PatchUShort(int position, ushort value) {
+            buffer[start + position]     = (byte) value;
+            buffer[start + position + 1] = (byte) (value >> 8);
+        }
+
+        public void WriteByte(byte value) {
+            EnsureWritable(1);
+            buffer[end++] = value;
+        }
+
+        public void WriteBool(bool value) {
+            EnsureWritable(1);
+            buffer[end++] = value ? (byte) 1 : (byte) 0;
+        }
+
+        public void WriteUShort(ushort value) {
+            EnsureWritable(2);
+            buffer[end]     = (byte) value;
+            buffer[end + 1] = (byte) (value >> 8);
+            end += 2;
+        }
+
+        public void WriteShort(short value) {
+            WriteUShort((ushort) value);
+        }
+
+        public void WriteChar(char value) {
+            WriteUShort(value);
+        }
+
+        public void WriteUInt(uint value) {
+            EnsureWritable(4);
+            buffer[end]     = (byte) value;
+            buffer[end + 1] = (byte) (value >> 8);
+            buffer[end + 2] = (byte) (value >> 16);
+            buffer[end + 3] = (byte) (value >> 24);
+            end += 4;
+        }
+
+        public void WriteInt(int value) {
+            WriteUInt((uint) value);
+        }
+
+        public void WriteULong(ulong value) {
+            EnsureWritable(8);
+            uint low  = (uint) value;
+            uint high = (uint) (value >> 32);
+            buffer[end]     = (byte) low;
+            buffer[end + 1] = (byte) (low >> 8);
+            buffer[end + 2] = (byte) (low >> 16);
+            buffer[end + 3] = (byte) (low >> 24);
+            buffer[end + 4] = (byte) high;
+            buffer[end + 5] = (byte) (high >> 8);
+            buffer[end + 6] = (byte) (high >> 16);
+            buffer[end + 7] = (byte) (high >> 24);
+            end += 8;
+        }
+
+        public void WriteLong(long value) {
+            WriteULong((ulong) value);
+        }
+
+        /// <summary>
+        /// Low precision floats are sent as halfs (2 bytes instead of 4)
+        /// </summary>
+        public unsafe void WriteFloat(float value, bool lowPrecision = false) {
+            if(lowPrecision) {
+                WriteUShort(Half.GetBits(new Half(value)));
+            } else {
+                WriteUInt(*(uint*) &value);
             }
         }
 
         /// <summary>
-        /// Same wire format as WriteArray with byte elements (ushort count, one byte each), but copies the array
-        /// in one go instead of boxing and converting every single byte, which produced ~200 bytes of garbage per byte
+        /// Low precision doubles are sent as floats (4 bytes instead of 8)
         /// </summary>
-        public void WriteBytes(byte[] val) {
-            if(val == null) {
-                Write((ushort) 0);
+        public void WriteDouble(double value, bool lowPrecision = false) {
+            if(lowPrecision) {
+                WriteFloat((float) value);
+            } else {
+                WriteLong(BitConverter.DoubleToInt64Bits(value));
+            }
+        }
+
+        /// <summary>
+        /// Length (4 bytes) followed by the UTF8 bytes, null is sent as an empty string
+        /// </summary>
+        public void WriteString(string value) {
+            if(string.IsNullOrEmpty(value)) {
+                WriteInt(0);
                 return;
             }
 
-            Write((ushort) val.Length);
-            buffer.AddRange(val);
+            EnsureWritable(4 + Encoding.UTF8.GetMaxByteCount(value.Length));
+            int count = Encoding.UTF8.GetBytes(value, 0, value.Length, buffer, end + 4);
+            WriteInt(count);
+            end += count;
+        }
+
+        /// <summary>
+        /// Copies raw bytes into the stream, without a length in front
+        /// </summary>
+        public void WriteBuffer(byte[] data, int offset, int count) {
+            if(count <= 0) return;
+            EnsureWritable(count);
+            Buffer.BlockCopy(data, offset, buffer, end, count);
+            end += count;
+        }
+
+        public void WriteArray(object[] val, bool lowPrecision = false) {
+            if(val == null) {
+                WriteUShort(0);
+                return;
+            }
+
+            WriteUShort((ushort) val.Length);
+            for(int i = 0; i < val.Length; i++) {
+                Write(val[i], lowPrecision);
+            }
+        }
+
+        /// <summary>
+        /// Same wire format as WriteArray with byte elements (ushort count, one byte each), but copies the array in one go
+        /// </summary>
+        public void WriteBytes(byte[] val) {
+            if(val == null) {
+                WriteUShort(0);
+                return;
+            }
+
+            WriteUShort((ushort) val.Length);
+            WriteBuffer(val, 0, val.Length);
         }
 
         public void WriteRawFallback(object val) {
@@ -115,59 +364,37 @@ namespace Netamite.Network {
                 stream.Flush();
 
                 byte[] bytes = stream.ToArray();
-                buffer.AddRange(bytes);
+                WriteBuffer(bytes, 0, bytes.Length);
             }
         }
 
+        /// <summary>
+        /// Writes all [SyncedVar] members of the object, one after another
+        /// </summary>
         public void WriteRaw(object obj) {
-            SyncedMember[] myMembers = SyncedMemberCache.Get(obj.GetType());
-
-            for(int i = 0; i < myMembers.Length; i++) {
-                MemberInfo memberInfo = myMembers[i].Member;
-                SyncedVar syncedVar = myMembers[i].Attribute;
-
-                if(syncedVar != null) {
-                    Type t = myMembers[i].Type;
-
-                    if(t == typeof(byte[])) {
-                        WriteBytes((byte[]) memberInfo.GetValue(obj));
-                    } else if(t.IsArray) {
-                        System.Collections.IList val = (System.Collections.IList) memberInfo.GetValue(obj);
-
-                        if(val == null) {
-                            WriteArray(null);
-                        } else {
-                            object[] array = new object[val.Count];
-                            val.CopyTo(array, 0);
-
-                            WriteArray(array, syncedVar.LowPrecision);
-                        }
-                    } else {
-                        object val = memberInfo.GetValue(obj);
-
-                        Write(val, syncedVar.LowPrecision);
-                    }
-                }
-            }
+            ObjectSerializer.Get(obj.GetType()).Write(this, obj);
         }
 
+        /// <summary>
+        /// Writes any value. Uses the DataConverter of its type, types without one get written member by member.
+        /// </summary>
         public void Write(object val, bool lowPrecision = false) {
-            try {
-                byte[] bytes = DataConverter.GetBytes(val, lowPrecision);
-                if(bytes != null) {
-                    buffer.AddRange(bytes);
-                    return;
-                }
-            }catch(MissingDataConverterException) { } // Ignore it and just write it raw
-            
-            WriteRaw(val);
+            if(val == null) throw new ArgumentNullException(nameof(val), "Can't write null, the receiver would not know what to read.");
+
+            Type type = val.GetType();
+            DataConverterBase converter = DataConverter.Find(type);
+            if(converter != null) {
+                converter.WriteBoxed(this, val, lowPrecision);
+            } else {
+                ObjectSerializer.Get(type).Write(this, val);
+            }
         }
         #endregion
 
         #region Read from buffer
         public byte ReadByte(bool moveReadPos = true) {
-            if(buffer.Count > readPos) {
-                byte result = readableBuffer[readPos];
+            if(end - start > readPos) {
+                byte result = buffer[start + readPos];
                 if(moveReadPos) {
                     readPos++;
                 }
@@ -176,13 +403,78 @@ namespace Netamite.Network {
             throw new Exception("Could not read value of type 'byte'!");
         }
 
-        public object[] ReadArray(Type type, bool lowPrecision = false, bool moveReadPos = true) {
-            ushort length = (ushort) Read(typeof(ushort), false, moveReadPos);
+        public bool ReadBool() {
+            return buffer[Take(1)] != 0;
+        }
 
-            object[] values = new object[length];
-            for(ushort i = 0; i < length; i++) {
-                values[i] = Read(type, lowPrecision, moveReadPos);
+        public ushort ReadUShort() {
+            int at = Take(2);
+            return (ushort) (buffer[at] | (buffer[at + 1] << 8));
+        }
+
+        public short ReadShort() {
+            return (short) ReadUShort();
+        }
+
+        public char ReadChar() {
+            return (char) ReadUShort();
+        }
+
+        public uint ReadUInt() {
+            int at = Take(4);
+            return (uint) (buffer[at] | (buffer[at + 1] << 8) | (buffer[at + 2] << 16) | (buffer[at + 3] << 24));
+        }
+
+        public int ReadInt() {
+            return (int) ReadUInt();
+        }
+
+        public ulong ReadULong() {
+            int at = Take(8);
+            uint low  = (uint) (buffer[at]     | (buffer[at + 1] << 8) | (buffer[at + 2] << 16) | (buffer[at + 3] << 24));
+            uint high = (uint) (buffer[at + 4] | (buffer[at + 5] << 8) | (buffer[at + 6] << 16) | (buffer[at + 7] << 24));
+            return ((ulong) high << 32) | low;
+        }
+
+        public long ReadLong() {
+            return (long) ReadULong();
+        }
+
+        public unsafe float ReadFloat(bool lowPrecision = false) {
+            if(lowPrecision) {
+                return (float) Half.ToHalf(ReadUShort());
             }
+            uint bits = ReadUInt();
+            return *(float*) &bits;
+        }
+
+        public double ReadDouble(bool lowPrecision = false) {
+            if(lowPrecision) {
+                return (double) ReadFloat();
+            }
+            return BitConverter.Int64BitsToDouble(ReadLong());
+        }
+
+        public string ReadString() {
+            int count = ReadInt();
+            if(count <= 0) return "";
+
+            int at = Take(count);
+            return Encoding.UTF8.GetString(buffer, at, count);
+        }
+
+        public object[] ReadArray(Type type, bool lowPrecision = false, bool moveReadPos = true) {
+            int startPos = readPos;
+            ushort length = ReadUShort();
+
+            // Never trust the length for the allocation, a 3 byte packet could otherwise claim 65535 elements
+            object[] values = new object[Math.Min((int) length, Math.Max(UnreadLength(), 16))];
+            for(int i = 0; i < length; i++) {
+                if(i == values.Length) Array.Resize(ref values, Math.Min((int) length, values.Length * 2));
+                values[i] = Read(type, lowPrecision);
+            }
+
+            if(!moveReadPos) readPos = startPos;
             return values;
         }
 
@@ -190,19 +482,23 @@ namespace Netamite.Network {
         /// Counterpart of WriteBytes, reads data written by WriteArray with byte elements as well
         /// </summary>
         public byte[] ReadBytes(bool moveReadPos = true) {
-            if(readPos + 2 > readableBuffer.Length) throw new Exception("Could not read value of type 'byte[]'!");
-            int length = BitConverter.ToUInt16(readableBuffer, readPos);
-            if(readPos + 2 + length > readableBuffer.Length) throw new Exception("Could not read value of type 'byte[]'!");
+            int startPos = readPos;
+            if(UnreadLength() < 2) throw new Exception("Could not read value of type 'byte[]'!");
+            int length = ReadUShort();
+            if(UnreadLength() < length) {
+                readPos = startPos;
+                throw new Exception("Could not read value of type 'byte[]'!");
+            }
 
             byte[] result = new byte[length];
-            Buffer.BlockCopy(readableBuffer, readPos + 2, result, 0, length);
+            Buffer.BlockCopy(buffer, Take(length), result, 0, length);
 
-            if(moveReadPos) readPos += 2 + length;
+            if(!moveReadPos) readPos = startPos;
             return result;
         }
 
         public object ReadRawFallback() {
-            using(var stream = new MemoryStream(readableBuffer)) {
+            using(var stream = new MemoryStream(buffer, start, end - start)) {
                 var formatter = new BinaryFormatter();
                 stream.Seek(readPos, SeekOrigin.Begin);
 
@@ -214,61 +510,29 @@ namespace Netamite.Network {
             }
         }
 
+        /// <summary>
+        /// Creates an object of the type and reads all its [SyncedVar] members
+        /// </summary>
         public object ReadRaw(Type type) {
-            SyncedMember[] myMembers = SyncedMemberCache.Get(type);
-            object obj = Activator.CreateInstance(type);
-
-            bool readAnything = false;
-
-            for(int i = 0; i < myMembers.Length; i++) {
-                MemberInfo memberInfo = myMembers[i].Member;
-                SyncedVar syncedVar = myMembers[i].Attribute;
-
-                if(syncedVar != null) {
-                    readAnything = true;
-                    Type t = myMembers[i].Type;
-
-                    //try {
-                    if(t == typeof(byte[])) {
-                        byte[] val = ReadBytes();
-                        if(val.Length > 0) memberInfo.SetValue(obj, val); // Empty arrays stay unset, like ReadArray
-                    } else if(t.IsArray) {
-                        object[] val = ReadArray(t.GetElementType(), syncedVar.LowPrecision);
-
-                        if(val.Length > 0 && val[0] != null) {
-                            Array filledArray = Array.CreateInstance(val[0].GetType(), val.Length);
-                            Array.Copy(val, filledArray, val.Length);
-
-                            memberInfo.SetValue(obj, filledArray);
-                        }
-                    } else {
-                        object val = Read(t, syncedVar.LowPrecision);
-
-                        memberInfo.SetValue(obj, val);
-                    }
-                }
-            }
-
-            if(!readAnything) {
-                // No [SyncedVar] members and no DataConverter for this type: reading it would silently
-                // consume zero bytes and desync every field that follows. Fail loudly instead.
-                throw new MissingDataConverterException(type);
-            }
-
-            return obj;
+            return ObjectSerializer.Get(type).ReadNew(this);
         }
 
+        /// <summary>
+        /// Reads any value. Uses the DataConverter of the type, types without one get read member by member.
+        /// </summary>
         public object Read(Type type, bool lowPrecision = false, bool moveReadPos = true) {
-            try {
-                int bytesRead = 0;
-                object val = DataConverter.FromBytes(type, readableBuffer, out bytesRead, readPos, lowPrecision);
-                if(val != null) {
-                    if(moveReadPos) readPos += bytesRead;
-                    return val;
-                }
-            } catch(MissingDataConverterException) { } // Ignore it and just read it raw
+            int startPos = readPos;
 
-            return ReadRaw(type);
+            object val;
+            DataConverterBase converter = DataConverter.Find(type);
+            if(converter != null) {
+                val = converter.ReadBoxed(this, lowPrecision);
+            } else {
+                val = ObjectSerializer.Get(type).ReadNew(this);
+            }
+
+            if(!moveReadPos) readPos = startPos;
+            return val;
         }
         #endregion
 
@@ -276,8 +540,9 @@ namespace Netamite.Network {
             if(!disposed) {
                 if(disposing) {
                     buffer = null;
-                    readableBuffer = null;
+                    start = end = 0;
                     readPos = 0;
+                    external = false;
                 }
                 disposed = true;
             }

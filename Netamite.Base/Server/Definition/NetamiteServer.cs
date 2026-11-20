@@ -8,6 +8,7 @@ using Netamite.Security;
 using Netamite.Server.Data;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
@@ -144,8 +145,8 @@ namespace Netamite.Server.Definition {
         }
 
         public void ProcessPacket(ClientInformation client, NetPacket packet) {
-            if(!_clients.ContainsKey(client.ClientId)) return;
             if(packet == null) return;
+            if(!_clients.ContainsKey(client.ClientId)) return;
 
             client.lastPacketTimestamp = TimeHelper.Millis; // Remember when we received the last packet to not timeout the player
 
@@ -205,9 +206,18 @@ namespace Netamite.Server.Definition {
         }
 
         public void SendTo(int clientId, NetPacket p) {
-            if(!_clients.ContainsKey(clientId)) return;
+            ClientInformation client;
+            if(!_clients.TryGetValue(clientId, out client)) return;
 
-            SendTo(_clients[clientId], p);
+            SendTo(client, p);
+        }
+
+        private static bool IsException(int clientId, int[] exceptions) {
+            if(exceptions == null) return false;
+            for(int i = 0; i < exceptions.Length; i++) {
+                if(exceptions[i] == clientId) return true;
+            }
+            return false;
         }
 
         public void SendTo(ClientInformation client, NetPacket p) {
@@ -223,14 +233,25 @@ namespace Netamite.Server.Definition {
         }
 
         public void SendReliableToAllExcept(NetPacket p, params int[] exceptions) {
-            foreach(ClientInformation client in Clients) {
-                if(exceptions.Contains(client.ClientId)) continue;
+            // The packet is the same for everybody, so it only gets serialized once and not once per client
+            PreparedPacket prepared = new PreparedPacket(p);
 
-                SendReliableTo(client, p);
+            foreach(KeyValuePair<int, ClientInformation> entry in _clients) {
+                if(IsException(entry.Key, exceptions)) continue;
+
+                SendReliableTo(entry.Value, prepared);
             }
         }
 
         public virtual void SendReliableTo(ClientInformation client, NetPacket p) { }
+
+        /// <summary>
+        /// Sends a packet that goes out to multiple clients. Transports override this to send p.GetData(), which is only
+        /// serialized once. Without an override the packet is sent like any other and serialized for every client.
+        /// </summary>
+        public virtual void SendReliableTo(ClientInformation client, PreparedPacket p) {
+            SendReliableTo(client, p.Packet);
+        }
 
 
         // Unreliable
@@ -239,14 +260,25 @@ namespace Netamite.Server.Definition {
         }
 
         public void SendUnreliableToAllExcept(NetPacket p, params int[] exceptions) {
-            foreach(ClientInformation client in Clients) {
-                if(exceptions.Contains(client.ClientId)) continue;
+            // The packet is the same for everybody, so it only gets serialized once and not once per client
+            PreparedPacket prepared = new PreparedPacket(p);
 
-                SendUnreliableTo(client, p);
+            foreach(KeyValuePair<int, ClientInformation> entry in _clients) {
+                if(IsException(entry.Key, exceptions)) continue;
+
+                SendUnreliableTo(entry.Value, prepared);
             }
         }
 
         public virtual void SendUnreliableTo(ClientInformation client, NetPacket p) { }
+
+        /// <summary>
+        /// Sends a packet that goes out to multiple clients. Transports override this to send p.GetData(), which is only
+        /// serialized once. Without an override the packet is sent like any other and serialized for every client.
+        /// </summary>
+        public virtual void SendUnreliableTo(ClientInformation client, PreparedPacket p) {
+            SendUnreliableTo(client, p.Packet);
+        }
 
 
         /// <summary>
@@ -319,8 +351,8 @@ namespace Netamite.Server.Definition {
         }
 
         public ClientInformation GetClientById(int id) {
-            if(_clients.ContainsKey(id)) return _clients[id];
-            return null;
+            ClientInformation client;
+            return _clients.TryGetValue(id, out client) ? client : null;
         }
     }
 }

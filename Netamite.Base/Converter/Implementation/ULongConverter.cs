@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Network;
+using System;
 
 namespace Netamite.Converter.Implementation {
     public class ULongConverter : DataConverterInterface<ulong> {
@@ -10,6 +11,14 @@ namespace Netamite.Converter.Implementation {
 
         public static new byte[] GetBytes(ulong value, bool lowPrecision = false) {
             return BitConverter.GetBytes(value);
+        }
+
+        public override void Write(BinaryNetStream stream, ulong value, bool lowPrecision) {
+            stream.WriteULong(value);
+        }
+
+        public override ulong Read(BinaryNetStream stream, bool lowPrecision) {
+            return stream.ReadULong();
         }
     }
 }

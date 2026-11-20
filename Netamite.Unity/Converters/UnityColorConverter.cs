@@ -1,5 +1,6 @@
 ﻿using Netamite.Converter;
 using Netamite.Converter.Implementation;
+using Netamite.Network;
 using UnityEngine;
 
 namespace Netamite.Unity.Converters {
@@ -18,6 +19,22 @@ namespace Netamite.Unity.Converters {
 
         public static Color FromBuiltin(Datatype.Color o) {
             return new Color(o.r, o.g, o.b, o.a);
+        }
+
+        // Straight into the packet, without going through the Netamite Color and a byte[]
+        public override void Write(BinaryNetStream stream, Color value, bool lowPrecision) {
+            stream.WriteFloat(value.r, lowPrecision);
+            stream.WriteFloat(value.g, lowPrecision);
+            stream.WriteFloat(value.b, lowPrecision);
+            stream.WriteFloat(value.a, lowPrecision);
+        }
+
+        public override Color Read(BinaryNetStream stream, bool lowPrecision) {
+            float r = stream.ReadFloat(lowPrecision);
+            float g = stream.ReadFloat(lowPrecision);
+            float b = stream.ReadFloat(lowPrecision);
+            float a = stream.ReadFloat(lowPrecision);
+            return new Color(r, g, b, a);
         }
     }
 }

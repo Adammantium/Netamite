@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Network;
+using System;
 
 namespace Netamite.Converter.Implementation {
     public class BooleanConverter : DataConverterInterface<bool> {
@@ -10,6 +11,14 @@ namespace Netamite.Converter.Implementation {
 
         public static new byte[] GetBytes(bool value, bool lowPrecision = false) {
             return BitConverter.GetBytes(value);
+        }
+
+        public override void Write(BinaryNetStream stream, bool value, bool lowPrecision) {
+            stream.WriteBool(value);
+        }
+
+        public override bool Read(BinaryNetStream stream, bool lowPrecision) {
+            return stream.ReadBool();
         }
     }
 }

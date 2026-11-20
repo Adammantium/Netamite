@@ -164,16 +164,26 @@ namespace Netamite.Steam.Server {
         }
 
         public override void SendReliableTo(ClientInformation client, NetPacket p) {
-            Send(client, true, p);
+            Send(client, true, p, null);
         }
 
         public override void SendUnreliableTo(ClientInformation client, NetPacket p) {
-            Send(client, false, p);
+            Send(client, false, p, null);
         }
 
-        private void Send(ClientInformation client, bool reliable, NetPacket packet) {
-            if(userIdToSteamMapping.ContainsKey(client.ClientId)) {
-                CSteamID target = (CSteamID) userIdToSteamMapping[client.ClientId];
+        // Packets that go to multiple clients, they share their serialized data
+        public override void SendReliableTo(ClientInformation client, PreparedPacket p) {
+            Send(client, true, p.Packet, p);
+        }
+
+        public override void SendUnreliableTo(ClientInformation client, PreparedPacket p) {
+            Send(client, false, p.Packet, p);
+        }
+
+        private void Send(ClientInformation client, bool reliable, NetPacket packet, PreparedPacket prepared) {
+            ulong steamId;
+            if(userIdToSteamMapping.TryGetValue(client.ClientId, out steamId)) {
+                CSteamID target = (CSteamID) steamId;
 
                 if(Netamite.MasterClient is SteamClient) {
                     SteamClient c = (SteamClient) Netamite.MasterClient;
@@ -187,10 +197,11 @@ namespace Netamite.Steam.Server {
                     }
                 }
 
-                if(reliable) {
-                    steamUserReliableMapping[client.ClientId].QueuePacket(packet);
+                SteamSocket socket = reliable ? steamUserReliableMapping[client.ClientId] : steamUserUnreliableMapping[client.ClientId];
+                if(prepared != null) {
+                    socket.QueuePacket(prepared);
                 } else {
-                    steamUserUnreliableMapping[client.ClientId].QueuePacket(packet);
+                    socket.QueuePacket(packet);
                 }
             }
         }

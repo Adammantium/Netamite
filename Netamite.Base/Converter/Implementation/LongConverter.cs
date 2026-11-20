@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Network;
+using System;
 
 namespace Netamite.Converter.Implementation {
     public class LongConverter : DataConverterInterface<long> {
@@ -10,6 +11,14 @@ namespace Netamite.Converter.Implementation {
 
         public static new byte[] GetBytes(long value, bool lowPrecision = false) {
             return BitConverter.GetBytes(value);
+        }
+
+        public override void Write(BinaryNetStream stream, long value, bool lowPrecision) {
+            stream.WriteLong(value);
+        }
+
+        public override long Read(BinaryNetStream stream, bool lowPrecision) {
+            return stream.ReadLong();
         }
     }
 }

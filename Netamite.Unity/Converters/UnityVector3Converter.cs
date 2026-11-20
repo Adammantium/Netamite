@@ -1,5 +1,6 @@
 ﻿using Netamite.Converter;
 using Netamite.Converter.Implementation;
+using Netamite.Network;
 using UnityEngine;
 
 namespace Netamite.Unity.Converters {
@@ -18,6 +19,20 @@ namespace Netamite.Unity.Converters {
 
         public static Vector3 FromBuiltin(Datatype.Vector3 o) {
             return new Vector3(o.x, o.y, o.z);
+        }
+
+        // Straight into the packet, without going through the Netamite Vector3 and a byte[]
+        public override void Write(BinaryNetStream stream, Vector3 value, bool lowPrecision) {
+            stream.WriteFloat(value.x, lowPrecision);
+            stream.WriteFloat(value.y, lowPrecision);
+            stream.WriteFloat(value.z, lowPrecision);
+        }
+
+        public override Vector3 Read(BinaryNetStream stream, bool lowPrecision) {
+            float x = stream.ReadFloat(lowPrecision);
+            float y = stream.ReadFloat(lowPrecision);
+            float z = stream.ReadFloat(lowPrecision);
+            return new Vector3(x, y, z);
         }
     }
 }

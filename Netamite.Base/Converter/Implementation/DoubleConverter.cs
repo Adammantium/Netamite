@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Netamite.Network;
+using System;
 
 namespace Netamite.Converter.Implementation {
     public class DoubleConverter : DataConverterInterface<double> {
@@ -22,6 +23,14 @@ namespace Netamite.Converter.Implementation {
             } else {
                 return BitConverter.GetBytes(value);
             }
+        }
+
+        public override void Write(BinaryNetStream stream, double value, bool lowPrecision) {
+            stream.WriteDouble(value, lowPrecision);
+        }
+
+        public override double Read(BinaryNetStream stream, bool lowPrecision) {
+            return stream.ReadDouble(lowPrecision);
         }
     }
 }

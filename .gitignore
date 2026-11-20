@@ -3,3 +3,5 @@ bin
 Dotfuscated
 .vs
 packages
+
+.DS_Store

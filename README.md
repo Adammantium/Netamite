@@ -85,6 +85,27 @@ To add attributes to the packet, you just define the variables you want to use a
 `SyncedVar` also allows for a boolean to be passed to it, if you pass in a true value, it will reduce the data that will be sent, but you will lose precision. This mostly works on floats, they will get converted to halfs before they are transmitted.  
 This conversion will be handled without you having to do anything, but keep in mind that this will reduce the precision of the float.
 
+#### Use your own data types
+Types netamite doesn't know can be sent in two ways:
+- Add `SyncedVar` to the fields of your class. It will then be sent field by field, just like a packet.
+- Write a converter. That is the faster and smaller option for types that get sent a lot:
+```C#
+public class MyPointConverter : DataConverterInterface<MyPoint> {
+    public override void Write(BinaryNetStream stream, MyPoint value, bool lowPrecision) {
+        stream.WriteFloat(value.x, lowPrecision);
+        stream.WriteFloat(value.y, lowPrecision);
+    }
+
+    public override MyPoint Read(BinaryNetStream stream, bool lowPrecision) {
+        float x = stream.ReadFloat(lowPrecision);
+        float y = stream.ReadFloat(lowPrecision);
+        return new MyPoint(x, y);
+    }
+}
+```
+Converters are found automatically, you don't have to register them. `Read` has to read exactly what `Write` has written.  
+Converters that only have the static `GetBytes` / `FromBytes` methods keep working, but they create a new byte array for every single value, so `Write` / `Read` is the way to go.
+
 #### How to handle packet
 There are two ways to handle packets within netamite, you can either handle the packet within the packet class itself or use a global packet handler.
 ##### Handle them withing your packet (recommended)
@@ -142,6 +163,7 @@ server.SendToAll(packet);                          // to every client
 server.SendToAllExcept(packet, client.ClientId);   // to everyone except the given client ids
 ```
 `SendTo...` picks the reliable or unreliable channel based on the packets `PacketDefinition`. To force a channel, use the `SendReliable...` / `SendUnreliable...` variants.  
+`SendToAll...` converts the packet to bytes only once and sends the same bytes to every client, so `BeforeProcessing` is called once and not once per client.  
 All connected clients are available through `server.Clients`, a single one through `server.GetClientById(id)`.
 
 ## Client Side Initialization
